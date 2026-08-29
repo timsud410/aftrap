@@ -17,6 +17,13 @@
   const settlements = window.AFTRAP_SETTLEMENTS || [];
 
   const el = id => document.getElementById(id);
+  const esc = input => String(input ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character]);
   const value = id => el(id).value.trim();
   const setMessage = (id, text, error = false) => {
     const node = el(id);

@@ -21,9 +21,9 @@ class AccountUiTests(unittest.TestCase):
             'id="bets-view"',
             'id="bet-form"',
             'id="scenario-bankroll"',
-            'src="aftrap-account.js?v=20260829-2"',
+            'src="aftrap-account.js?v=20260829-3"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-2"',
+            'src="aftrap-app.js?v=20260829-3"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -83,6 +83,7 @@ class AccountUiTests(unittest.TestCase):
 
     def test_account_module_uses_explicit_shared_data(self):
         self.assertIn("window.AFTRAP_DATA", self.account_js)
+        self.assertIn("const esc =", self.account_js)
         self.assertNotIn("DATA.map", self.account_js)
         self.assertNotIn("teamName(fixture", self.account_js)
 
