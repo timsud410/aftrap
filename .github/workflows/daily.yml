@@ -38,7 +38,10 @@ jobs:
           python-version: "3.12"
 
       - name: Installeer wat het model nodig heeft
-        run: pip install numpy scipy
+        run: pip install -r requirements.txt
+
+      - name: Controleer model- en selectielogica
+        run: python -m unittest discover -v
 
       # De ruwe CSV's veranderen niet met terugwerkende kracht, dus we
       # bewaren ze tussen runs. Scheelt football-data.co.uk honderd
@@ -52,6 +55,8 @@ jobs:
 
       - name: Haal data op en genereer de tips
         run: python build_site.py
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -1,0 +1,56 @@
+{
+  "source": "walk_forward_backtest",
+  "generated_at": "2026-08-29T10:10:04",
+  "trained_through_season": 2023,
+  "selection_rule": "directional: train n>=100 and Wilson lower 95% > baseline; validation n>=30 and hit rate > baseline; test n>=30 and Wilson lower 95% > baseline; when closing odds cover >=80%, the lower 95% bound of test ROI must be > 0",
+  "signals": {
+    "attack_defence_mismatch:away_over_1.5": {
+      "signal": "attack_defence_mismatch",
+      "selection": "away_over_1.5",
+      "hit_rate": 0.669243,
+      "n": 1294,
+      "baseline": 0.5,
+      "reason": "voorspellend; voor deze markt ontbreken slotkoersen",
+      "validation_hit_rate": 0.647727,
+      "test_hit_rate": 0.676768,
+      "test_n": 198,
+      "test_roi_at_close": null
+    },
+    "attack_defence_mismatch:home_over_1.5": {
+      "signal": "attack_defence_mismatch",
+      "selection": "home_over_1.5",
+      "hit_rate": 0.678885,
+      "n": 4665,
+      "baseline": 0.5,
+      "reason": "voorspellend; voor deze markt ontbreken slotkoersen",
+      "validation_hit_rate": 0.686275,
+      "test_hit_rate": 0.674515,
+      "test_n": 722,
+      "test_roi_at_close": null
+    },
+    "btts_rate:btts_yes": {
+      "signal": "btts_rate",
+      "selection": "btts_yes",
+      "hit_rate": 0.561687,
+      "n": 3769,
+      "baseline": 0.5,
+      "reason": "voorspellend; voor deze markt ontbreken slotkoersen",
+      "validation_hit_rate": 0.580132,
+      "test_hit_rate": 0.584507,
+      "test_n": 852,
+      "test_roi_at_close": null
+    },
+    "first_half_tempo:fh_under_1.5": {
+      "signal": "first_half_tempo",
+      "selection": "fh_under_1.5",
+      "hit_rate": 0.675843,
+      "n": 6938,
+      "baseline": 0.5,
+      "reason": "voorspellend; voor deze markt ontbreken slotkoersen",
+      "validation_hit_rate": 0.640074,
+      "test_hit_rate": 0.694149,
+      "test_n": 1128,
+      "test_roi_at_close": null
+    }
+  }
+}

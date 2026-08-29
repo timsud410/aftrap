@@ -1,0 +1,86 @@
+import copy
+import tempfile
+import unittest
+from datetime import date
+from pathlib import Path
+
+import db as store
+from load_api_football import store_fixture
+from run_tips import pick_upcoming_dates
+
+
+FIXTURE = {
+    "fixture": {
+        "id": 123456,
+        "date": "2026-09-05T16:30:00+02:00",
+        "status": {"short": "NS"},
+    },
+    "league": {"id": 39, "season": 2026},
+    "teams": {
+        "home": {"id": 50, "name": "Manchester City"},
+        "away": {"id": 33, "name": "Manchester United"},
+    },
+    "goals": {"home": None, "away": None},
+    "score": {"halftime": {"home": None, "away": None}},
+}
+
+
+class ApiFootballStorageTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.conn = store.connect(Path(self.tmp.name) / "test.sqlite")
+        store.team_id(self.conn, "EPL", "Man City")
+        store.team_id(self.conn, "EPL", "Man United")
+        self.conn.commit()
+
+    def tearDown(self):
+        self.conn.close()
+        self.tmp.cleanup()
+
+    def test_known_api_names_map_to_historical_teams(self):
+        fixture_id, created, new_names = store_fixture(self.conn, "EPL", FIXTURE)
+        self.assertTrue(created)
+        self.assertEqual(new_names, [])
+        row = self.conn.execute(
+            """SELECT th.name home, ta.name away
+               FROM fixtures f JOIN teams th ON th.id=f.home_team_id
+               JOIN teams ta ON ta.id=f.away_team_id WHERE f.id=?""",
+            (fixture_id,),
+        ).fetchone()
+        self.assertEqual((row["home"], row["away"]), ("Man City", "Man United"))
+
+    def test_external_id_updates_postponed_fixture_in_place(self):
+        fixture_id, _, _ = store_fixture(self.conn, "EPL", FIXTURE)
+        moved = copy.deepcopy(FIXTURE)
+        moved["fixture"]["date"] = "2026-09-06T18:00:00+02:00"
+        moved["fixture"]["status"]["short"] = "PST"
+        updated_id, created, _ = store_fixture(self.conn, "EPL", moved)
+        self.assertEqual(updated_id, fixture_id)
+        self.assertFalse(created)
+        row = self.conn.execute(
+            "SELECT match_date, kickoff, status FROM fixtures WHERE id=?",
+            (fixture_id,),
+        ).fetchone()
+        self.assertEqual((row["match_date"], row["kickoff"], row["status"]),
+                         ("2026-09-06", "18:00", "PST"))
+
+    def test_upcoming_window_only_contains_playable_api_fixtures(self):
+        store_fixture(self.conn, "EPL", FIXTURE)
+        self.conn.commit()
+        self.assertEqual(
+            pick_upcoming_dates(self.conn, date(2026, 9, 1), horizon_days=7),
+            ["2026-09-05"],
+        )
+
+        postponed = copy.deepcopy(FIXTURE)
+        postponed["fixture"]["status"]["short"] = "PST"
+        store_fixture(self.conn, "EPL", postponed)
+        self.conn.commit()
+        self.assertEqual(
+            pick_upcoming_dates(self.conn, date(2026, 9, 1), horizon_days=7),
+            [],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -3,7 +3,7 @@ Modelkern: teamsterktes uit xG, scorematrix met Dixon-Coles-correctie,
 en alle marktkansen die daaruit volgen.
 
 Dit is het deel waar subtiele fouten stil doorwerken naar verkeerde tips,
-dus het is expres compact en volledig getest (zie test_model.py).
+dus het is expres compact en zijn de belangrijkste invarianten getest.
 
 Ontwerpkeuzes, met reden:
 

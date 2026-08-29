@@ -2,12 +2,12 @@
 """
 Genereert tips uit de database en schrijft het dashboard weg.
 
-    python3 run_tips.py                    # laatste complete speelronde, met uitslagen
+    python3 run_tips.py                    # vooruitblik, of terugkijkmodus zonder API-data
     python3 run_tips.py --date 2025-11-08
     python3 run_tips.py --window 8 --open aftrap.html
 
-Zolang je nog geen Pro-abonnement hebt (en dus geen programma van het lopende
-seizoen), draait dit in terugkijkmodus: het model wordt gefit op uitsluitend
+Met ingeladen API-Football-fixtures toont dit de komende acht dagen. Als die
+ontbreken draait het in terugkijkmodus: het model wordt gefit op uitsluitend
 data van vóór de speeldatum, genereert tips alsof die ochtend was, en zet er
 vervolgens de werkelijke uitslag naast.
 
@@ -28,7 +28,13 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import db as store
-from model import MatchObservation, confidence_band, data_quality_score, fit_ratings, predict_fixture
+from model import (
+    MatchObservation,
+    data_quality_score,
+    fit_ratings,
+    initialise_promoted,
+    predict_fixture,
+)
 from tips import MatchContext, SignalPerformance, build_tips, collect_signals
 
 # Zie load_fdcouk.py: alles hangt aan de map van het script, zodat je het
@@ -37,24 +43,24 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_DB = str(HERE / "data" / "aftrap.sqlite")
 TEMPLATE = HERE / "dashboard_template.html"
 DEFAULT_OUT = str(HERE / "aftrap.html")
+WEIGHTS_FILE = HERE / "signal_weights.json"
 
 # xG-bronnen in volgorde van betrouwbaarheid.
 XG_PREFERENCE = ("understat", "api_football", "sot_proxy")
 
-# Startwaarden tot signal_results genoeg waarnemingen heeft. Deze cijfers zijn
-# aannames, geen metingen -- ze staan hier zodat de ranking werkt, en horen
-# vervangen te worden door de echte trefpercentages zodra de backtest draait.
-PROVISIONAL_PERFORMANCE = {
-    "combined_xg":             SignalPerformance(0.560, 1000),
-    "attack_defence_mismatch": SignalPerformance(0.570, 1000),
-    "form_vs_underlying":      SignalPerformance(0.565, 1000),
-    "keeper_overperformance":  SignalPerformance(0.545, 1000),
-    "defensive_frailty":       SignalPerformance(0.540, 1000),
-    "first_half_tempo":        SignalPerformance(0.545, 1000),
-    "btts_rate":               SignalPerformance(0.525, 1000),
-    "key_attacker_absent":     SignalPerformance(0.000, 0),   # geen blessuredata
-    "rest_advantage":          SignalPerformance(0.510, 1000),
-}
+def load_signal_performance(path: Path = WEIGHTS_FILE) -> dict[str, SignalPerformance]:
+    """Lees uitsluitend door de walk-forward backtest goedgekeurde gewichten."""
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        key: SignalPerformance(
+            hit_rate=float(value["hit_rate"]),
+            n=int(value["n"]),
+            baseline=float(value.get("baseline", 0.5)),
+        )
+        for key, value in payload.get("signals", {}).items()
+    }
 
 
 # ------------------------------------------------------------
@@ -157,13 +163,60 @@ def pick_review_date(conn: sqlite3.Connection, min_matches: int = 6) -> str | No
     return row["match_date"] if row else None
 
 
+def pick_upcoming_dates(
+    conn: sqlite3.Connection,
+    start: date | None = None,
+    horizon_days: int = 8,
+) -> list[str]:
+    """Komende speeldagen met daadwerkelijk nog te spelen API-fixtures."""
+    start = start or date.today()
+    end = start + timedelta(days=horizon_days)
+    return [
+        row["match_date"]
+        for row in conn.execute(
+            """SELECT DISTINCT f.match_date
+               FROM fixtures f
+               JOIN fixture_external_ids x ON x.fixture_id = f.id
+               WHERE x.source = 'api_football'
+                 AND f.match_date BETWEEN ? AND ?
+                 AND f.home_goals IS NULL AND f.away_goals IS NULL
+                 AND f.status IN ('NS', 'TBD')
+               ORDER BY f.match_date""",
+            (start.isoformat(), end.isoformat()),
+        )
+    ]
+
+
 # ------------------------------------------------------------
 # afwikkelen
 # ------------------------------------------------------------
 
 
-def settle(selection: str, hg: int, ag: int) -> bool | None:
+def settle(
+    selection: str,
+    hg: int,
+    ag: int,
+    hg_ht: int | None = None,
+    ag_ht: int | None = None,
+) -> bool | None:
     """Kwam de tip uit? None als we het niet kunnen bepalen."""
+    if selection.startswith("fh_"):
+        if hg_ht is None or ag_ht is None:
+            return None
+        rest = selection[3:]
+        total_ht = hg_ht + ag_ht
+        if rest.startswith("over_"):
+            return total_ht > float(rest[5:])
+        if rest.startswith("under_"):
+            return total_ht < float(rest[6:])
+        if rest == "home":
+            return hg_ht > ag_ht
+        if rest == "away":
+            return ag_ht > hg_ht
+        if rest == "draw":
+            return hg_ht == ag_ht
+        return None
+
     total = hg + ag
     if selection.startswith("over_"):
         return total > float(selection[5:])
@@ -190,7 +243,7 @@ def settle(selection: str, hg: int, ag: int) -> bool | None:
                 return goals > float(rest[5:])
             if rest.startswith("under_"):
                 return goals < float(rest[6:])
-    return None   # eerste helft e.d. vraagt ruststanden per markt
+    return None
 
 
 def label(selection: str, home: str, away: str) -> str:
@@ -223,11 +276,104 @@ def label(selection: str, home: str, away: str) -> str:
 # ------------------------------------------------------------
 
 
-def build_day(conn: sqlite3.Connection, target: str, window: int) -> list[dict]:
+def fit_league_snapshot(
+    conn: sqlite3.Connection, league: str, target: str, min_observations: int = 100
+) -> tuple | None:
+    """Fit één causale competitiesnapshot voor hergebruik in UI en backtest."""
+    source = best_xg_source(conn, league)
+    if not source:
+        return None
+    obs = load_observations(conn, league, source, target)
+    if len(obs) < min_observations:
+        return None
+    ratings = fit_ratings(obs, date.fromisoformat(target))
+    avg_total = statistics.fmean([o.home_xg + o.away_xg for o in obs[-400:]])
+    return ratings, source, avg_total, len(obs)
+
+
+def analyse_fixture(
+    conn: sqlite3.Connection,
+    fixture: sqlite3.Row,
+    target: str,
+    window: int,
+    snapshot: tuple,
+    as_of: str | None = None,
+) -> dict | None:
+    """Alle pre-match informatie voor één fixture, zonder tipgewichten."""
+    cutoff = as_of or target
+    ratings, source, league_avg, _ = snapshot
+    missing = [
+        t for t in (fixture["home"], fixture["away"]) if t not in ratings.attack
+    ]
+    fixture_ratings = initialise_promoted(ratings, missing) if missing else ratings
+    pred = predict_fixture(
+        fixture_ratings,
+        fixture["home"],
+        fixture["away"],
+        fixture["first_half_ratio"],
+    )
+    hf = team_form(
+        conn, fixture["league_code"], fixture["home"], cutoff, window, source
+    )
+    af = team_form(
+        conn, fixture["league_code"], fixture["away"], cutoff, window, source
+    )
+    if not hf or not af or hf.get("xg_for") is None or af.get("xg_for") is None:
+        return None
+
+    lam, mu = pred["lambda_home"], pred["lambda_away"]
+    matchday = _matchday(
+        conn,
+        fixture["league_code"],
+        fixture["season"],
+        fixture["home"],
+        fixture["away"],
+        target,
+    )
+    ctx = MatchContext(
+        home_team=fixture["home"], away_team=fixture["away"],
+        lambda_home=lam, lambda_away=mu, league_avg_goals=league_avg,
+        home_xg_for=hf["xg_for"], home_xg_against=hf["xg_against"],
+        away_xg_for=af["xg_for"], away_xg_against=af["xg_against"],
+        home_goals_against=hf["goals_against"], away_goals_against=af["goals_against"],
+        home_btts_rate=hf["btts_rate"], away_btts_rate=af["btts_rate"],
+        home_fh_goals=hf["fh_goals"], away_fh_goals=af["fh_goals"],
+        first_half_ratio=fixture["first_half_ratio"],
+        rest_days_home=_rest(hf, target), rest_days_away=_rest(af, target),
+        european_match_home=False, european_match_away=False,
+        missing_xg_share_home=0.0, missing_xg_share_away=0.0,
+        matchday=matchday, window=window,
+    )
+    quality = data_quality_score(
+        fixture_ratings.effective_matches.get(fixture["home"], 0.0),
+        fixture_ratings.effective_matches.get(fixture["away"], 0.0),
+        xg_source=source,
+        matchday=matchday,
+    )
+    return {
+        "prediction": pred,
+        "signals": collect_signals(ctx),
+        "quality": quality,
+        "source": source,
+        "matchday": matchday,
+    }
+
+
+def build_day(
+    conn: sqlite3.Connection,
+    target: str,
+    window: int,
+    performance: dict[str, SignalPerformance] | None = None,
+    as_of: str | None = None,
+) -> list[dict]:
+    cutoff = as_of or target
+    performance = performance if performance is not None else load_signal_performance()
     fixtures = conn.execute(
-        """SELECT f.id, f.league_code, l.name league, l.first_half_ratio, l.rho,
+        """SELECT f.id, f.league_code, f.season, l.name league,
+                  l.first_half_ratio, l.rho,
                   f.kickoff, th.name home, ta.name away,
-                  f.home_goals, f.away_goals
+                  f.home_goals, f.away_goals,
+                  f.home_goals_ht, f.away_goals_ht
            FROM fixtures f
            JOIN leagues l ON l.code = f.league_code
            JOIN teams th ON th.id = f.home_team_id
@@ -243,60 +389,38 @@ def build_day(conn: sqlite3.Connection, target: str, window: int) -> list[dict]:
     leagues = sorted({f["league_code"] for f in fixtures})
     models: dict[str, tuple] = {}
     for lg in leagues:
-        source = best_xg_source(conn, lg)
-        if not source:
+        snapshot = fit_league_snapshot(conn, lg, cutoff)
+        if snapshot is None:
+            print(f"  {lg}: onvoldoende modeldata vóór {cutoff}; overgeslagen")
             continue
-        obs = load_observations(conn, lg, source, target)
-        if len(obs) < 100:
-            print(f"  {lg}: maar {len(obs)} wedstrijden vóór {target}; overgeslagen")
-            continue
-        ratings = fit_ratings(obs, date.fromisoformat(target))
-        avg_total = statistics.fmean([o.home_xg + o.away_xg for o in obs[-400:]])
-        models[lg] = (ratings, source, avg_total)
-        print(f"  {lg}: {len(obs)} duels, bron {source}, "
+        ratings, source, _, n_obs = snapshot
+        models[lg] = snapshot
+        print(f"  {lg}: {n_obs} duels, bron {source}, "
               f"rho {ratings.rho:+.3f}, thuisvoordeel {ratings.home_advantage:+.3f}")
 
     out = []
     for f in fixtures:
         if f["league_code"] not in models:
             continue
-        ratings, source, league_avg = models[f["league_code"]]
-        if f["home"] not in ratings.attack or f["away"] not in ratings.attack:
-            continue   # promovendus zonder historie; §5.3 van de spec
-
-        pred = predict_fixture(ratings, f["home"], f["away"], f["first_half_ratio"])
-        hf = team_form(conn, f["league_code"], f["home"], target, window, source)
-        af = team_form(conn, f["league_code"], f["away"], target, window, source)
-        if not hf or not af or hf.get("xg_for") is None or af.get("xg_for") is None:
+        analysis = analyse_fixture(
+            conn, f, target, window, models[f["league_code"]], as_of=cutoff
+        )
+        if analysis is None:
             continue
-
+        pred = analysis["prediction"]
+        source = analysis["source"]
+        quality = analysis["quality"]
         lam, mu = pred["lambda_home"], pred["lambda_away"]
-        ctx = MatchContext(
-            home_team=f["home"], away_team=f["away"],
-            lambda_home=lam, lambda_away=mu, league_avg_goals=league_avg,
-            home_xg_for=hf["xg_for"], home_xg_against=hf["xg_against"],
-            away_xg_for=af["xg_for"], away_xg_against=af["xg_against"],
-            home_goals_against=hf["goals_against"], away_goals_against=af["goals_against"],
-            home_btts_rate=hf["btts_rate"], away_btts_rate=af["btts_rate"],
-            home_fh_xg=hf["fh_goals"], away_fh_xg=af["fh_goals"],
-            rest_days_home=_rest(hf, target), rest_days_away=_rest(af, target),
-            european_match_home=False, european_match_away=False,
-            missing_xg_share_home=0.0, missing_xg_share_away=0.0,   # nog geen blessuredata
-            matchday=99, window=window,
+        chosen = build_tips(
+            pred["probs"], analysis["signals"], quality, performance
         )
-
-        quality = data_quality_score(
-            ratings.effective_matches.get(f["home"], 0.0),
-            ratings.effective_matches.get(f["away"], 0.0),
-            xg_source=source, matchday=None,
-        )
-        chosen = build_tips(pred["probs"], collect_signals(ctx), quality, PROVISIONAL_PERFORMANCE)
 
         hg, ag = f["home_goals"], f["away_goals"]
         played = hg is not None and ag is not None
 
         out.append({
             "league": f["league"], "league_code": f["league_code"],
+            "date": target,
             "kickoff": f["kickoff"] or "",
             "home": f["home"], "away": f["away"],
             "lambda_home": round(lam, 2), "lambda_away": round(mu, 2),
@@ -312,7 +436,13 @@ def build_day(conn: sqlite3.Connection, target: str, window: int) -> list[dict]:
                 "raw": t.selection, "m": t.market, "p": round(t.model_prob, 3),
                 "b": t.confidence_band, "r": t.rationale,
                 "g": [s.key for s in t.signals],
-                "hit": settle(t.selection, hg, ag) if played else None,
+                "hit": settle(
+                    t.selection,
+                    hg,
+                    ag,
+                    f["home_goals_ht"],
+                    f["away_goals_ht"],
+                ) if played else None,
             } for t in chosen],
         })
     return out
@@ -323,6 +453,30 @@ def _rest(form: dict, target: str) -> int:
         return 7
     delta = (date.fromisoformat(target) - date.fromisoformat(form["last_date"])).days
     return max(1, min(21, delta))
+
+
+def _matchday(
+    conn: sqlite3.Connection,
+    league: str,
+    season: int,
+    home: str,
+    away: str,
+    target: str,
+) -> int:
+    """Conservatieve speelronde: minste aantal eerdere duels van beide teams + 1."""
+    counts = []
+    for team in (home, away):
+        row = conn.execute(
+            """SELECT COUNT(*) n
+               FROM fixtures f
+               JOIN teams t ON t.league_code = f.league_code
+                 AND t.name = ?
+               WHERE f.league_code = ? AND f.season = ? AND f.match_date < ?
+                 AND (f.home_team_id = t.id OR f.away_team_id = t.id)""",
+            (team, league, season, target),
+        ).fetchone()
+        counts.append(int(row["n"]))
+    return min(counts) + 1
 
 
 # ------------------------------------------------------------
@@ -345,13 +499,33 @@ def main_with_args(
         return 1
 
     conn = store.connect(args.db)
-    target = args.date or pick_review_date(conn)
-    if not target:
+    today = date.today()
+    upcoming = [] if args.date else pick_upcoming_dates(conn, today)
+    targets = [args.date] if args.date else upcoming
+    forward = bool(upcoming)
+    if not targets:
+        review_date = pick_review_date(conn)
+        targets = [review_date] if review_date else []
+    if not targets:
         print("Geen speeldag met genoeg wedstrijden gevonden.")
         return 1
 
-    print(f"\nSpeeldag {target} — model fitten op uitsluitend data daarvóór\n")
-    fixtures = build_day(conn, target, args.window)
+    cutoff = today.isoformat() if forward else targets[0]
+    if forward:
+        print(
+            f"\nVooruitblik {targets[0]} t/m {targets[-1]} — "
+            f"modeldata van vóór {cutoff}\n"
+        )
+    else:
+        print(f"\nSpeeldag {targets[0]} — model fitten op uitsluitend data daarvóór\n")
+    performance = load_signal_performance()
+    if not performance:
+        print("  Geen gevalideerde signaalgewichten; er worden geen tips getoond.")
+    fixtures = []
+    for target in targets:
+        fixtures.extend(
+            build_day(conn, target, args.window, performance, as_of=cutoff)
+        )
     if not fixtures:
         print("\nGeen wedstrijden om te tonen. Probeer een andere datum met --date.")
         return 1
@@ -366,10 +540,13 @@ def main_with_args(
         print(f"  {hits} van {len(settled)} afgewikkelde tips kwam uit "
               f"({hits / len(settled):.0%})")
 
+    matchday_label = (
+        f"{targets[0]} t/m {targets[-1]}" if len(targets) > 1 else targets[0]
+    )
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/[]",
         json.dumps(fixtures, ensure_ascii=False, separators=(",", ":")),
-    ).replace("__MATCHDAY__", target).replace(
+    ).replace("__MATCHDAY__", matchday_label).replace(
         "__GENERATED__", datetime.now().strftime("%d-%m-%Y %H:%M"))
 
     out = Path(args.out)
@@ -384,7 +561,11 @@ def main_with_args(
 def main() -> int:
     ap = argparse.ArgumentParser(description="Genereer tips en schrijf het dashboard.")
     ap.add_argument("--db", default=DEFAULT_DB)
-    ap.add_argument("--date", default=None, help="YYYY-MM-DD; standaard de laatste speelronde")
+    ap.add_argument(
+        "--date",
+        default=None,
+        help="YYYY-MM-DD; standaard komende API-speeldagen of laatste speelronde",
+    )
     ap.add_argument("--window", type=int, default=10, help="aantal duels voor vormcijfers")
     ap.add_argument("--out", default=DEFAULT_OUT)
     ap.add_argument("--open", dest="do_open", action="store_true", help="open in de browser")

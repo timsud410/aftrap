@@ -20,8 +20,9 @@ Twee regels die de rest van het ontwerp bepalen:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
-from typing import Callable, Sequence
+from typing import Callable, Optional, Sequence
 
 MIN_OBSERVATIONS = 100
 
@@ -113,8 +114,9 @@ class MatchContext:
     away_goals_against: float
     home_btts_rate: float           # aandeel wedstrijden met BTTS, thuis
     away_btts_rate: float
-    home_fh_xg: float
-    away_fh_xg: float
+    home_fh_goals: float
+    away_fh_goals: float
+    first_half_ratio: float
     rest_days_home: int
     rest_days_away: int
     european_match_home: bool
@@ -125,7 +127,10 @@ class MatchContext:
     window: int = 10
 
 
-SignalFn = Callable[[MatchContext], Signal | None]
+# `from __future__ import annotations` stelt functie-annotaties uit, maar niet
+# de expressie van een type-alias. Optional houdt lokale runs op Python 3.9
+# werkend; GitHub gebruikt 3.12.
+SignalFn = Callable[[MatchContext], Optional[Signal]]
 REGISTRY: dict[str, SignalFn] = {}
 
 
@@ -307,8 +312,8 @@ def key_attacker_absent(ctx: MatchContext) -> Signal | None:
 
 @signal
 def first_half_tempo(ctx: MatchContext) -> Signal | None:
-    total_fh = ctx.home_fh_xg + ctx.away_fh_xg
-    expected_fh = ctx.league_avg_goals * 0.44
+    total_fh = ctx.home_fh_goals + ctx.away_fh_goals
+    expected_fh = ctx.league_avg_goals * ctx.first_half_ratio
     diff = total_fh - expected_fh
     if abs(diff) < 0.22:
         return None
@@ -318,11 +323,12 @@ def first_half_tempo(ctx: MatchContext) -> Signal | None:
         direction="fh_over_1.5" if diff > 0 else "fh_under_1.5",
         strength=max(-1.0, min(1.0, diff / 0.5)),
         evidence={
-            "fh_xg": round(total_fh, 2),
+            "fh_goals": round(total_fh, 2),
             "fh_avg": round(expected_fh, 2),
         },
         template=(
-            "samen {fh_xg} xG voor rust, tegen een competitiegemiddelde "
+            "samen {fh_goals} doelpunten voor rust per duel, tegen een "
+            "competitiegemiddelde "
             "van {fh_avg} in de eerste helft"
         ),
     )
@@ -409,6 +415,7 @@ class SignalPerformance:
 
     hit_rate: float
     n: int
+    baseline: float = 0.5
 
     # Een hitrate van 60% is voor deze markten al uitzonderlijk goed; de
     # schaal loopt daarom van 50% (waardeloos) tot EXCELLENT_HIT_RATE
@@ -420,8 +427,41 @@ class SignalPerformance:
     def weight(self) -> float:
         if self.n < MIN_OBSERVATIONS:
             return 0.0
-        edge = self.hit_rate - 0.5
-        return max(0.0, min(1.0, edge / (self.EXCELLENT_HIT_RATE - 0.5)))
+        if not self.baseline < self.EXCELLENT_HIT_RATE:
+            return 0.0
+        # Gebruik de ondergrens van het 95%-Wilsoninterval in plaats van het
+        # ruwe gemiddelde. Een toevallige 60% uit 100 observaties krijgt zo
+        # niet hetzelfde gewicht als 60% uit 5.000 observaties.
+        z = 1.96
+        denominator = 1 + z * z / self.n
+        centre = self.hit_rate + z * z / (2 * self.n)
+        spread = z * math.sqrt(
+            (self.hit_rate * (1 - self.hit_rate) + z * z / (4 * self.n)) / self.n
+        )
+        lower = (centre - spread) / denominator
+        edge = lower - self.baseline
+        return max(
+            0.0,
+            min(1.0, edge / (self.EXCELLENT_HIT_RATE - self.baseline)),
+        )
+
+
+def selection_baseline(selection: str) -> float:
+    """Naïeve kansgrens voor een markt zonder beschikbare quotering."""
+    if selection in {"home", "draw", "away", "fh_home", "fh_draw", "fh_away"}:
+        return 1.0 / 3.0
+    if selection in {"home_or_draw", "away_or_draw", "home_or_away"}:
+        return 2.0 / 3.0
+    return 0.5
+
+
+def performance_for(
+    performance: dict[str, SignalPerformance], signal: Signal
+) -> SignalPerformance | None:
+    """Richting-specifiek gewicht, met compatibele terugval voor oude bestanden."""
+    return performance.get(f"{signal.key}:{signal.direction}") or performance.get(
+        signal.key
+    )
 
 
 @dataclass
@@ -464,13 +504,19 @@ def build_tips(
         if prob is None:
             continue
 
-        model_confidence = min(1.0, abs(prob - 0.5) / 0.30)
+        # Kans moet in de richting van de gekozen uitkomst bewegen. De oude
+        # absolute afstand tot 50% beloonde óók een tip die het model juist
+        # onwaarschijnlijk vond (bijvoorbeeld over 1.5 bij 35%).
+        baseline = selection_baseline(selection)
+        model_confidence = max(0.0, min(1.0, (prob - baseline) / (1.0 - baseline)))
 
         support = 0.0
         for s in sigs:
-            perf = performance.get(s.key)
+            perf = performance_for(performance, s)
             w = perf.weight if perf else 0.0
-            support += s.strength * w
+            # `direction` bevat de kant (over/under, home/away); het teken van
+            # strength mag een under- of away-signaal dus niet opnieuw straffen.
+            support += abs(s.strength) * w
 
         # Signalen die voor de TEGENGESTELDE kant van hetzelfde cluster
         # pleiten trekken de steun omlaag. Zonder deze aftrek kan een
@@ -482,7 +528,7 @@ def build_tips(
             for s in signals:
                 if CORRELATION_CLUSTERS.get(s.direction) != opposite:
                     continue
-                perf = performance.get(s.key)
+                perf = performance_for(performance, s)
                 w = perf.weight if perf else 0.0
                 support -= abs(s.strength) * w
 
@@ -493,7 +539,11 @@ def build_tips(
             continue
 
         used = sorted(
-            (s for s in sigs if (performance.get(s.key) or SignalPerformance(0, 0)).weight > 0),
+            (
+                s
+                for s in sigs
+                if (performance_for(performance, s) or SignalPerformance(0, 0)).weight > 0
+            ),
             key=lambda s: abs(s.strength),
             reverse=True,
         )[:2]

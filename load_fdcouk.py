@@ -39,6 +39,7 @@ from pathlib import Path
 import db as store
 
 BASE = "https://www.football-data.co.uk/mmz4281"
+DEFAULT_GOALS_PER_SOT = 0.30
 
 # Alles hangt aan de map waar dit script staat, niet aan de map waar je
 # toevallig in Terminal staat. Zo kun je het script gewoon vanuit Finder in
@@ -73,7 +74,9 @@ def fetch_csv(season: int, fd_code: str, refresh: bool = False) -> str | None:
         with urllib.request.urlopen(req, timeout=40) as resp:
             raw = resp.read()
     except urllib.error.HTTPError as e:
-        if e.code == 404:
+        # football-data.co.uk geeft voor sommige nog niet gestarte competities
+        # een 300-pagina terug in plaats van een gewone 404.
+        if e.code in (300, 404):
             return None
         raise
     text = raw.decode("utf-8", errors="replace")
@@ -233,11 +236,11 @@ def store_season(
 def add_xg_proxy(conn: sqlite3.Connection, league_code: str, season: int) -> int:
     """Leidt een xG-vervanger af uit schoten op doel.
 
-    De methode is bewust simpel en controleerbaar: binnen dezelfde competitie
-    en hetzelfde seizoen wordt het aantal schoten op doel geschaald op de
-    werkelijke doelpuntenproductie.
+    De methode is bewust simpel en controleerbaar: het aantal schoten op doel
+    wordt geschaald met de doelpunten-per-schot-verhouding die VOOR de
+    betreffende wedstrijd bekend was.
 
-        proxy = schoten_op_doel * (totaal doelpunten / totaal schoten op doel)
+        proxy = schoten_op_doel * historische_doelpunten_per_schot
 
     Dat behoudt het scoreniveau van de competitie en gebruikt de verhouding
     tussen de ploegen als signaal. Het weet niet vanaf welke positie geschoten
@@ -248,35 +251,72 @@ def add_xg_proxy(conn: sqlite3.Connection, league_code: str, season: int) -> int
     Of dit voor het model goed genoeg is, is een empirische vraag. Fit beide
     en vergelijk de Brier score op dezelfde wedstrijden.
     """
+    # Begin met alle eerdere seizoenen. De eerste beschikbare wedstrijd valt
+    # terug op een expliciete prior; nooit op informatie uit zijn eigen seizoen.
     totals = conn.execute(
         """SELECT SUM(f.home_goals + f.away_goals) AS goals,
                   SUM(COALESCE(sh.shots_on_target, 0) + COALESCE(sa.shots_on_target, 0)) AS sot
            FROM fixtures f
            JOIN fixture_stats sh ON sh.fixture_id = f.id AND sh.is_home = 1
            JOIN fixture_stats sa ON sa.fixture_id = f.id AND sa.is_home = 0
-           WHERE f.league_code = ? AND f.season = ?
+           WHERE f.league_code = ? AND f.season < ?
              AND sh.shots_on_target IS NOT NULL AND sa.shots_on_target IS NOT NULL""",
         (league_code, season),
     ).fetchone()
 
-    if not totals or not totals["sot"]:
-        return 0  # geen schotdata dit seizoen; dat is normaal voor oude Eredivisie
+    cumulative_goals = float(totals["goals"] or 0.0)
+    cumulative_sot = float(totals["sot"] or 0.0)
 
-    rate = totals["goals"] / totals["sot"]
-
-    rows = conn.execute(
-        """SELECT s.fixture_id, s.team_id, s.shots_on_target
-           FROM fixture_stats s
-           JOIN fixtures f ON f.id = s.fixture_id
-           WHERE f.league_code = ? AND f.season = ? AND s.shots_on_target IS NOT NULL""",
+    fixtures = conn.execute(
+        """SELECT f.id fixture_id, f.match_date, f.home_goals, f.away_goals,
+                  sh.team_id home_team_id, sh.shots_on_target home_sot,
+                  sa.team_id away_team_id, sa.shots_on_target away_sot
+           FROM fixtures f
+           JOIN fixture_stats sh ON sh.fixture_id = f.id AND sh.is_home = 1
+           JOIN fixture_stats sa ON sa.fixture_id = f.id AND sa.is_home = 0
+           WHERE f.league_code = ? AND f.season = ?
+             AND sh.shots_on_target IS NOT NULL AND sa.shots_on_target IS NOT NULL
+           ORDER BY f.match_date, f.id""",
         (league_code, season),
     ).fetchall()
 
-    conn.executemany(
-        "INSERT OR REPLACE INTO fixture_xg (fixture_id, team_id, xg, source) VALUES (?,?,?,'sot_proxy')",
-        [(r["fixture_id"], r["team_id"], round(r["shots_on_target"] * rate, 4)) for r in rows],
-    )
-    return len(rows)
+    written = 0
+    i = 0
+    while i < len(fixtures):
+        match_date = fixtures[i]["match_date"]
+        same_day = []
+        while i < len(fixtures) and fixtures[i]["match_date"] == match_date:
+            same_day.append(fixtures[i])
+            i += 1
+
+        rate = (
+            cumulative_goals / cumulative_sot
+            if cumulative_sot > 0
+            else DEFAULT_GOALS_PER_SOT
+        )
+        proxy_rows = []
+        for r in same_day:
+            proxy_rows.extend([
+                (r["fixture_id"], r["home_team_id"], round(r["home_sot"] * rate, 4)),
+                (r["fixture_id"], r["away_team_id"], round(r["away_sot"] * rate, 4)),
+            ])
+        conn.executemany(
+            "INSERT OR REPLACE INTO fixture_xg (fixture_id, team_id, xg, source) VALUES (?,?,?,'sot_proxy')",
+            proxy_rows,
+        )
+        written += len(proxy_rows)
+
+        # Wedstrijden op dezelfde datum mogen elkaars uitslag niet kennen.
+        cumulative_goals += sum(r["home_goals"] + r["away_goals"] for r in same_day)
+        cumulative_sot += sum(r["home_sot"] + r["away_sot"] for r in same_day)
+
+    return written
+
+
+def current_season_start(today: dt.date | None = None) -> int:
+    """Startjaar van het Europese seizoen dat op `today` loopt."""
+    today = today or dt.date.today()
+    return today.year if today.month >= 7 else today.year - 1
 
 
 # ------------------------------------------------------------
@@ -347,7 +387,7 @@ def main_with_args(
     van het inlaadpad bestaat en de geautomatiseerde run niet stilletjes
     iets anders doet dan de handmatige.
     """
-    to_season = to_season or dt.date.today().year
+    to_season = to_season if to_season is not None else current_season_start()
     args = argparse.Namespace(
         db=db, from_season=from_season, to_season=to_season,
         leagues=leagues, refresh=refresh,
@@ -372,6 +412,7 @@ def main_with_args(
     run_id = cur.lastrowid
 
     total_in = total_skip = 0
+    errors: list[str] = []
     print(f"Inladen {args.from_season}/{(args.from_season+1)%100:02d} t/m "
           f"{args.to_season}/{(args.to_season+1)%100:02d} "
           f"voor {len(leagues)} competities\n")
@@ -380,10 +421,17 @@ def main_with_args(
         line = f"  {lg['name']:<16}"
         for season in range(args.from_season, args.to_season + 1):
             try:
-                text = fetch_csv(season, lg["fd_code"], refresh=args.refresh)
+                text = fetch_csv(
+                    season,
+                    lg["fd_code"],
+                    # Het lopende seizoensbestand wordt na iedere speelronde
+                    # aangevuld en mag dus nooit blind uit de cache komen.
+                    refresh=args.refresh or season == current_season_start(),
+                )
             except Exception as e:
                 line += "!"
                 print(f"\n    {season}: downloaden mislukt: {e}")
+                errors.append(f"{lg['code']} {season}: {e}")
                 continue
             if not text:
                 line += "·"   # seizoen bestaat niet
@@ -399,8 +447,17 @@ def main_with_args(
         print(line)
 
     conn.execute(
-        "UPDATE load_runs SET finished_at = ?, status = 'ok', inserted = ?, skipped = ? WHERE id = ?",
-        (dt.datetime.now().isoformat(timespec="seconds"), total_in, total_skip, run_id),
+        """UPDATE load_runs
+           SET finished_at = ?, status = ?, inserted = ?, skipped = ?, notes = ?
+           WHERE id = ?""",
+        (
+            dt.datetime.now().isoformat(timespec="seconds"),
+            "error" if errors else "ok",
+            total_in,
+            total_skip,
+            "\n".join(errors) if errors else None,
+            run_id,
+        ),
     )
     conn.commit()
 
@@ -409,6 +466,9 @@ def main_with_args(
     coverage_report(conn)
     print(f"  Database: {Path(args.db).resolve()}")
     print(f"  Ruwe bestanden: {RAW.resolve()}\n")
+    if errors:
+        print(f"  {len(errors)} downloadfout(en); build wordt afgebroken.\n")
+        return 1
     return 0
 
 

@@ -69,6 +69,15 @@ CREATE TABLE IF NOT EXISTS fixtures (
 CREATE INDEX IF NOT EXISTS idx_fix_date   ON fixtures (match_date);
 CREATE INDEX IF NOT EXISTS idx_fix_league ON fixtures (league_code, season);
 
+-- Stabiele koppeling met externe fixture-ID's. Zonder deze tabel zou een
+-- verplaatste wedstrijd door zijn nieuwe datum als tweede fixture verschijnen.
+CREATE TABLE IF NOT EXISTS fixture_external_ids (
+    source      TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    fixture_id  INTEGER NOT NULL UNIQUE REFERENCES fixtures(id) ON DELETE CASCADE,
+    PRIMARY KEY (source, external_id)
+);
+
 CREATE TABLE IF NOT EXISTS fixture_stats (
     fixture_id      INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
     team_id         INTEGER NOT NULL REFERENCES teams(id),

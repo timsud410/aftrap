@@ -12,10 +12,13 @@ pagina dan een pagina met tips van vorige week zonder dat je dat ziet.
 
 from __future__ import annotations
 
+import os
 import sys
 import traceback
 from datetime import date
 from pathlib import Path
+
+import db as store
 
 HERE = Path(__file__).resolve().parent
 SITE = HERE / "site"
@@ -34,12 +37,13 @@ def step(name: str, fn) -> None:
 def main() -> int:
     try:
         import load_fdcouk
+        import load_api_football
         import run_tips
     except ImportError as e:
         print(f"Kan de modules niet laden: {e}")
         return 1
 
-    this_year = date.today().year
+    this_year = load_fdcouk.current_season_start(date.today())
 
     def load() -> None:
         rc = load_fdcouk.main_with_args(
@@ -54,8 +58,28 @@ def main() -> int:
         if rc != 0:
             raise RuntimeError("tips genereren mislukt")
 
+    def load_upcoming() -> None:
+        api_key = os.environ.get("API_FOOTBALL_KEY", "").strip()
+        if not api_key:
+            print("  API_FOOTBALL_KEY ontbreekt; lokale terugkijkmodus blijft actief.")
+            return
+        conn = store.connect(load_fdcouk.DEFAULT_DB)
+        try:
+            result = load_api_football.load_upcoming(conn, api_key)
+        finally:
+            conn.close()
+        print(
+            f"\n  {result['fetched']} komende fixtures gelezen, "
+            f"{result['created']} nieuw."
+        )
+        if result["new_teams"]:
+            print("  Nieuwe teams zonder historische naamkoppeling:")
+            for name in result["new_teams"]:
+                print(f"    - {name}")
+
     try:
         step("Data ophalen", load)
+        step("Komende wedstrijden ophalen", load_upcoming)
         step("Tips genereren", build)
     except Exception:
         traceback.print_exc()

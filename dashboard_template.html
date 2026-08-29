@@ -198,10 +198,13 @@
     gap: var(--s3) var(--s4);
   }
 
-  .kickoff {
+  .match-date, .kickoff {
     font-size: 12.5px; font-weight: 600; color: var(--muted);
-    font-variant-numeric: tabular-nums; min-width: 42px;
+    font-variant-numeric: tabular-nums;
   }
+
+  .match-date { min-width: 72px; text-transform: capitalize; }
+  .kickoff { min-width: 42px; }
 
   .teams { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; }
   .teams .vs { color: var(--faint); font-weight: 500; padding: 0 7px; }
@@ -316,10 +319,9 @@
   <div class="footnote">
     <h3>Hoe je dit leest</h3>
     <p>
-      <strong>Het model wist niets van deze speeldag.</strong> Het is gefit op
-      uitsluitend wedstrijden van vóór deze datum, dus de tips zijn wat je die
-      ochtend gezien zou hebben. De uitslagen staan er alleen naast om te
-      controleren, niet om mee te rekenen.
+      <strong>Het model kijkt nooit voorbij het generatiemoment.</strong> Het is
+      uitsluitend gefit op eerder gespeelde wedstrijden. In terugkijkmodus
+      staan uitslagen er alleen naast om te controleren, nooit om mee te rekenen.
     </p>
     <p>
       <strong>De streepjes zijn zekerheid, geen advies.</strong> Ze zeggen hoe
@@ -358,6 +360,9 @@ const SOURCE_LABEL = {
 
 const pct = v => Math.round(v * 100) + "%";
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const matchDate = value => new Intl.DateTimeFormat("nl-NL", {
+  weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Amsterdam"
+}).format(new Date(`${value}T12:00:00+02:00`));
 
 function weightMark(band) {
   const n = BAND[band].fill;
@@ -425,6 +430,7 @@ function renderBoard() {
         <span><i>btts</i> <b>${pct(f.p_btts)}</b></span></div>`;
 
       const head = `<div class="fx-top">
+        ${f.date ? `<span class="match-date">${esc(matchDate(f.date))}</span>` : ""}
         ${f.kickoff ? `<span class="kickoff">${esc(f.kickoff)}</span>` : ""}
         <span class="teams">${esc(f.home)}<span class="vs">–</span>${esc(f.away)}</span>
         ${f.score ? `<span class="result">${esc(f.score)}</span>` : ""}
