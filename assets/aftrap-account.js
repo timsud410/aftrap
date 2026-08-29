@@ -65,55 +65,21 @@
     return true;
   }
 
-  async function requestOtp(event) {
+  async function loginWithPassword(event) {
     event.preventDefault();
-    const button = el("request-code");
+    const button = el("login-button");
     const email = value("auth-email").toLowerCase();
-    if (!email) return;
-    setBusy(button, true, "Versturen…");
+    const password = value("auth-password");
+    if (!email || !password) return;
+    setBusy(button, true, "Inloggen…");
     setMessage("auth-status", "");
-    const { error } = await db.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true, emailRedirectTo: `${location.origin}${location.pathname}` },
-    });
+    const { error } = await db.auth.signInWithPassword({ email, password });
     setBusy(button, false, "");
     if (error) {
-      setMessage("auth-status", "De inlogmail kon niet worden verstuurd. Probeer het over een minuut opnieuw.", true);
+      setMessage("auth-status", "E-mailadres of wachtwoord klopt niet.", true);
       return;
     }
-    sessionStorage.setItem("aftrap_pending_email", email);
-    el("otp-email-copy").textContent = email;
-    el("email-form").classList.add("hidden");
-    el("otp-form").classList.remove("hidden");
-    el("auth-code").focus();
-    setMessage("auth-status", "Controleer je inbox. Gebruik de zescijferige code of open de inloglink.");
-  }
-
-  async function verifyOtp(event) {
-    event.preventDefault();
-    const button = el("verify-code");
-    const email = sessionStorage.getItem("aftrap_pending_email") || value("auth-email").toLowerCase();
-    const token = value("auth-code").replace(/\s/g, "");
-    if (!/^\d{6}$/.test(token)) {
-      setMessage("auth-status", "Vul de zescijferige code uit de e-mail in.", true);
-      return;
-    }
-    setBusy(button, true, "Controleren…");
-    const { error } = await db.auth.verifyOtp({ email, token, type: "email" });
-    setBusy(button, false, "");
-    if (error) {
-      setMessage("auth-status", "Deze code is ongeldig of verlopen. Vraag eventueel een nieuwe aan.", true);
-      return;
-    }
-    sessionStorage.removeItem("aftrap_pending_email");
     await authorizeSession();
-  }
-
-  function resetOtp() {
-    el("otp-form").classList.add("hidden");
-    el("email-form").classList.remove("hidden");
-    el("auth-code").value = "";
-    setMessage("auth-status", "");
   }
 
   async function loadSettings() {
@@ -320,9 +286,7 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     populateFixtureOptions();
-    el("email-form").addEventListener("submit", requestOtp);
-    el("otp-form").addEventListener("submit", verifyOtp);
-    el("auth-back").addEventListener("click", resetOtp);
+    el("email-form").addEventListener("submit", loginWithPassword);
     el("account-button").addEventListener("click", async () => { await db.auth.signOut(); location.reload(); });
     el("new-bet").addEventListener("click", () => openBetDialog());
     el("bet-form").addEventListener("submit", saveBet);

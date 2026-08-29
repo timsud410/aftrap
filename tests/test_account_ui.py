@@ -15,6 +15,7 @@ class AccountUiTests(unittest.TestCase):
     def test_account_interface_is_wired(self):
         for marker in (
             'id="auth-gate"',
+            'id="auth-password"',
             'data-view="bets"',
             'id="bets-view"',
             'id="bet-form"',
@@ -32,6 +33,11 @@ class AccountUiTests(unittest.TestCase):
         self.assertNotIn("service_role", self.public_assets.lower())
         self.assertNotIn("sb_secret_", self.public_assets.lower())
         self.assertIn("sb_publishable_", self.account_js)
+
+    def test_login_uses_password_without_publishing_it(self):
+        self.assertIn("signInWithPassword", self.account_js)
+        self.assertNotIn("signInWithOtp", self.account_js)
+        self.assertNotIn("const PASSWORD", self.public_assets)
 
     def test_bets_use_authenticated_owner(self):
         self.assertIn("user_id: user.id", self.account_js)
@@ -62,6 +68,7 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("selectedOdd", self.template)
         self.assertIn("Break-even", self.template)
         self.assertIn("fixture.odds", self.template)
+        self.assertIn("odd.s===key", self.template)
 
 
 if __name__ == "__main__":

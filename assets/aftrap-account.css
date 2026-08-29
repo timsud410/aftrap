@@ -14,7 +14,6 @@
 .auth-label,.bet-label { display: grid; gap: 6px; color: #657080; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .auth-input,.bet-input,.bet-select,.bet-textarea,.scenario-input { width: 100%; border: 1px solid #d9dee5; border-radius: 11px; padding: 12px 13px; background: white; color: var(--ink); font: inherit; font-size: 13px; outline: 0; }
 .auth-input:focus,.bet-input:focus,.bet-select:focus,.bet-textarea:focus,.scenario-input:focus { border-color: #7eaa4d; box-shadow: 0 0 0 3px rgba(183,243,107,.22); }
-.auth-code { font-family: var(--num); font-size: 23px; letter-spacing: .25em; text-align: center; }
 .auth-submit,.primary-action { border: 0; border-radius: 11px; padding: 13px 16px; background: var(--navy); color: white; font-size: 12px; font-weight: 800; }
 .auth-submit:disabled,.primary-action:disabled { cursor: wait; opacity: .55; }
 .auth-back { border: 0; padding: 5px; background: transparent; color: var(--blue); font-size: 10px; font-weight: 800; }
