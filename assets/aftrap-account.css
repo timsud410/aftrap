@@ -5,7 +5,7 @@
 .auth-gate.hidden { display: none; }
 .auth-card { width: min(430px,100%); border: 1px solid rgba(255,255,255,.12); border-radius: 26px; padding: 34px; background: rgba(255,255,255,.98); box-shadow: 0 30px 90px rgba(0,0,0,.38); }
 .auth-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 25px; }
-.auth-brand-mark { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 12px; background: var(--lime); color: var(--navy); font-family: var(--num); font-size: 18px; font-weight: 800; }
+.auth-brand-mark { width: 46px; height: 46px; display: block; border-radius: 13px; object-fit: cover; box-shadow: 0 5px 16px rgba(11,18,32,.2); }
 .auth-brand b { display: block; font-size: 15px; }
 .auth-brand span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 700; }
 .auth-card h1 { margin: 0; font-size: 31px; letter-spacing: -.045em; }

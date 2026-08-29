@@ -43,6 +43,19 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn('{ onConflict: "team_id" }', self.account_js)
         self.assertIn("Onze bets", self.template)
 
+    def test_app_logo_and_home_screen_manifest_are_wired(self):
+        self.assertIn('rel="manifest" href="manifest.webmanifest"', self.template)
+        self.assertIn('rel="apple-touch-icon"', self.template)
+        self.assertIn('src="aftrap-icon-192.png"', self.template)
+        for asset in (
+            "aftrap-icon-192.png",
+            "aftrap-icon-512.png",
+            "apple-touch-icon.png",
+            "favicon-32.png",
+            "manifest.webmanifest",
+        ):
+            self.assertTrue((ROOT / "assets" / asset).is_file(), asset)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1220">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Aftrap">
   <meta name="description" content="Datagedreven voetbaltips met transparante modelkansen en onderbouwing.">
   <meta property="og:title" content="Aftrap — datagedreven voetbaltips">
   <meta property="og:description" content="Zie direct waar het model wél iets ziet.">
@@ -15,6 +18,9 @@
   <meta name="twitter:description" content="Zie direct waar het model wél iets ziet.">
   <meta name="twitter:image" content="https://timsud410.github.io/aftrap/aftrap-og.png">
   <title>Aftrap — datagedreven voetbaltips</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
@@ -36,7 +42,7 @@
     .topbar { position: sticky; top: 0; z-index: 30; background: rgba(11,18,32,.96); color: white; backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.08); }
     .topbar-inner { max-width: 1180px; min-height: 68px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
     .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: var(--lime); color: var(--navy); font-size: 18px; font-weight: 800; letter-spacing: -.06em; transform: rotate(-4deg); }
+    .brand-mark { width: 38px; height: 38px; display: block; border-radius: 11px; object-fit: cover; box-shadow: 0 4px 14px rgba(0,0,0,.22); }
     .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -.04em; }
     .brand-tagline { padding-left: 12px; border-left: 1px solid rgba(255,255,255,.18); color: #aeb8c9; font-size: 12px; font-weight: 600; }
     .top-meta { display: flex; align-items: center; gap: 12px; color: #aeb8c9; font-size: 12px; }
@@ -203,7 +209,7 @@
 <body class="auth-pending">
   <section class="auth-gate" id="auth-gate" aria-label="Inloggen bij Aftrap">
     <div class="auth-card">
-      <div class="auth-brand"><span class="auth-brand-mark">A</span><div><b>Aftrap</b><span>Persoonlijke voetbalanalyse</span></div></div>
+      <div class="auth-brand"><img class="auth-brand-mark" src="aftrap-icon-192.png" alt=""><div><b>Aftrap</b><span>Persoonlijke voetbalanalyse</span></div></div>
       <h1>Welkom terug.</h1>
       <p>Log veilig in met je e-mailadres. Je ontvangt een eenmalige code of inloglink; een wachtwoord is niet nodig.</p>
       <form class="auth-form" id="email-form">
@@ -221,7 +227,7 @@
   </section>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><div class="brand-mark" aria-hidden="true">A</div><div class="brand-name">Aftrap</div><div class="brand-tagline">Modelselecties voor voetbal</div></div>
+      <div class="brand"><img class="brand-mark" src="aftrap-icon-192.png" alt=""><div class="brand-name">Aftrap</div><div class="brand-tagline">Modelselecties voor voetbal</div></div>
       <div class="top-meta"><span class="live-dot"></span><span>Bijgewerkt __GENERATED__</span><button class="help-button" id="open-help">Hoe werkt dit?</button><button class="account-button hidden" id="account-button" type="button" title="Uitloggen"><b id="account-name">Account</b><span>Uitloggen</span></button></div>
     </div>
   </header>
