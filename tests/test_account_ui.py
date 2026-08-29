@@ -37,6 +37,12 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("user_id: user.id", self.account_js)
         self.assertIn('from("aftrap_bets")', self.account_js)
 
+    def test_team_bankroll_uses_shared_record(self):
+        self.assertIn('team_id: "aftrap"', self.account_js)
+        self.assertIn('updated_by: user.id', self.account_js)
+        self.assertIn('{ onConflict: "team_id" }', self.account_js)
+        self.assertIn("Onze bets", self.template)
+
 
 if __name__ == "__main__":
     unittest.main()

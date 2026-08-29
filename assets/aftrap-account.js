@@ -117,7 +117,7 @@
   }
 
   async function loadSettings() {
-    const { data } = await db.from("aftrap_settings").select("starting_bankroll").maybeSingle();
+    const { data } = await db.from("aftrap_settings").select("starting_bankroll").eq("team_id", "aftrap").maybeSingle();
     startingBankroll = Number(data?.starting_bankroll || 0);
     el("bankroll-input").value = startingBankroll || "";
     el("scenario-bankroll").value = currentBankroll().toFixed(2);
@@ -131,10 +131,11 @@
     const button = el("save-bankroll");
     setBusy(button, true, "Opslaan…");
     const { error } = await db.from("aftrap_settings").upsert({
-      user_id: user.id,
+      team_id: "aftrap",
+      updated_by: user.id,
       starting_bankroll: amount,
       updated_at: new Date().toISOString(),
-    });
+    }, { onConflict: "team_id" });
     setBusy(button, false, "");
     if (error) {
       setMessage("bankroll-message", "Bankroll kon niet worden opgeslagen.", true);
