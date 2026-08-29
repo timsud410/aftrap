@@ -21,9 +21,9 @@ class AccountUiTests(unittest.TestCase):
             'id="bets-view"',
             'id="bet-form"',
             'id="scenario-bankroll"',
-            'src="aftrap-account.js?v=20260829-3"',
+            'src="aftrap-account.js?v=20260829-4"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-3"',
+            'src="aftrap-app.js?v=20260829-4"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -72,6 +72,14 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("Break-even", self.template)
         self.assertIn("fixture.odds", self.template)
         self.assertIn("odd.s===key", self.template)
+
+    def test_minimum_odd_ranking_is_wired(self):
+        self.assertIn('id="minimum-odd"', self.template)
+        self.assertIn('id="chance-ranking"', self.template)
+        self.assertIn("minimumOdd: 1.30", self.app_js)
+        self.assertIn("rankedSelections", self.app_js)
+        self.assertIn("b.probability - a.probability", self.app_js)
+        self.assertIn("Number(odd.o) < state.minimumOdd", self.app_js)
 
     def test_value_bet_and_auto_settlement_are_wired(self):
         self.assertIn("fairMarketProbability", self.app_js)

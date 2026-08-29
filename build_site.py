@@ -111,6 +111,8 @@ def main() -> int:
         )
         if odds_result["failures"]:
             print(f"  Let op: odds ophalen mislukte voor {odds_result['failures']} wedstrijden.")
+        if odds_result["mapping_reset"]:
+            print("  Oude verkeerd gekoppelde oddhistorie is eenmalig opgeschoond.")
         print(
             f"  Beschikbaarheid: {availability['injuries']} blessuremeldingen, "
             f"{availability['lineups']} opstellingen ({availability['calls']} API-calls)."

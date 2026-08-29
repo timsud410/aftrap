@@ -29,6 +29,7 @@ DEFAULT_HORIZON_DAYS = 8
 PLAYER_FORM_APPEARANCES = 5
 PLAYER_FORM_FIXTURES = 8
 PLAYER_FIXTURE_BATCH = 20
+ODDS_MAPPING_VERSION = "strict-v2"
 
 # Alleen bewezen naamverschillen worden handmatig gekoppeld. Alle overige
 # namen gaan door een unieke genormaliseerde match; bij twijfel ontstaat een
@@ -107,39 +108,72 @@ def _normalise(name: str) -> str:
     return " ".join(words)
 
 
-def canonical_odd_selection(bet_name: str, outcome_name: str) -> str | None:
-    """Vertaal gangbare pre-match API-markten naar onze modelselecties."""
+def canonical_odd_selection(
+    bet_name: str,
+    outcome_name: str,
+    handicap: object | None = None,
+) -> str | None:
+    """Vertaal uitsluitend expliciet ondersteunde pre-match markten.
+
+    API-Football bevat ook markten als ``Second Half Winner``,
+    ``Corners Winner`` en ``Both Teams Score - First Half``. Een brede
+    substringmatch zou die ten onrechte samenvoegen met fulltime 1X2 of BTTS.
+    Daarom is de betnaam hier bewust een strikte allowlist.
+    """
     bet = _normalise(bet_name)
     outcome = _normalise(outcome_name)
-    first_half = "first half" in bet or "1st half" in bet
 
-    if "both teams" in bet and ("score" in bet or "to score" in bet):
+    if bet in {"both teams score", "both teams to score"}:
         if outcome in {"yes", "no"}:
             return f"btts_{outcome}"
 
-    if "winner" in bet or bet in {"match result", "1x2"}:
+    result_prefix = {
+        "match winner": "",
+        "match result": "",
+        "1x2": "",
+        "first half winner": "fh_",
+        "first half result": "fh_",
+        "1st half winner": "fh_",
+        "1st half result": "fh_",
+    }.get(bet)
+    if result_prefix is not None:
         result = {"home": "home", "draw": "draw", "away": "away"}.get(outcome)
         if result:
-            return f"fh_{result}" if first_half else result
+            return f"{result_prefix}{result}"
 
-    if "double chance" in bet:
+    if bet == "double chance":
         compact = outcome.replace(" ", "")
         if compact in {"homedraw", "1x", "homeordraw"}:
             return "home_or_draw"
         if compact in {"drawaway", "x2", "awayordraw"}:
             return "away_or_draw"
+        if compact in {"homeaway", "12", "homeoraway"}:
+            return "home_or_away"
 
-    if "over under" in bet or "total goals" in bet:
-        match = re.match(r"\s*(over|under)\s+([0-9]+(?:[.,][0-9]+)?)", outcome_name.lower())
+    total_prefix = {
+        "goals over under": "",
+        "total goals": "",
+        "goals over under first half": "fh_",
+        "first half goals over under": "fh_",
+        "home team goals": "home_",
+        "home team total goals": "home_",
+        "total home": "home_",
+        "away team goals": "away_",
+        "away team total goals": "away_",
+        "total away": "away_",
+    }.get(bet)
+    if total_prefix is not None:
+        raw_outcome = outcome_name.lower().strip()
+        match = re.match(r"\s*(over|under)\s+([0-9]+(?:[.,][0-9]+)?)", raw_outcome)
+        if not match and outcome in {"over", "under"} and handicap is not None:
+            match = re.match(
+                r"\s*(over|under)\s+([0-9]+(?:[.,][0-9]+)?)",
+                f"{outcome} {handicap}",
+            )
         if match:
             kind, raw_line = match.groups()
             line = str(float(raw_line.replace(",", "."))).rstrip("0").rstrip(".")
-            key = f"{kind}_{line}"
-            if "home" in bet or "team 1" in bet:
-                return f"home_{key}"
-            if "away" in bet or "team 2" in bet:
-                return f"away_{key}"
-            return f"fh_{key}" if first_half else key
+            return f"{total_prefix}{kind}_{line}"
     return None
 
 
@@ -192,7 +226,9 @@ def _store_fixture_odds(
                         continue
                     if not outcome or odd <= 1:
                         continue
-                    selection = canonical_odd_selection(bet_name, outcome)
+                    selection = canonical_odd_selection(
+                        bet_name, outcome, value.get("handicap")
+                    )
                     if selection is None:
                         continue
                     row = (
@@ -316,6 +352,26 @@ def load_pre_match_odds(
     horizon_days: int = DEFAULT_HORIZON_DAYS,
 ) -> dict:
     """Laad alle pagina's met pre-match odds voor komende fixtures."""
+    marker = f"api_football_odds_mapping:{ODDS_MAPPING_VERSION}"
+    migrated = conn.execute(
+        "SELECT 1 FROM load_runs WHERE source=? AND status='ok' LIMIT 1",
+        (marker,),
+    ).fetchone()
+    mapping_reset = migrated is None
+    if mapping_reset:
+        # Oudere versies voegden o.a. second-half- en speciale BTTS-markten
+        # samen met fulltime markten. Ook de koershistorie daarvan is daardoor
+        # onbruikbaar en wordt eenmalig opnieuw opgebouwd.
+        conn.execute("DELETE FROM fixture_odds")
+        conn.execute("DELETE FROM fixture_odds_history")
+        now = datetime.now().astimezone().isoformat(timespec="seconds")
+        conn.execute(
+            """INSERT INTO load_runs
+               (source,started_at,finished_at,status,inserted,skipped,notes)
+               VALUES (?,?,?,'ok',0,0,?)""",
+            (marker, now, now, "Strikte allowlist voor pre-match oddmarkten"),
+        )
+        conn.commit()
     start = start or date.today()
     fixtures = _upcoming_api_fixtures(conn, start, horizon_days)
     rows = calls = failures = with_odds = 0
@@ -349,6 +405,7 @@ def load_pre_match_odds(
     return {
         "fixtures": len(fixtures), "with_odds": with_odds, "rows": rows,
         "bookmakers": len(bookmakers), "calls": calls, "failures": failures,
+        "mapping_reset": mapping_reset,
     }
 
 

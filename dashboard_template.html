@@ -78,10 +78,25 @@
     .select-filters { display: flex; gap: 9px; }
     .league-select { min-width: 190px; border: 1px solid var(--line); border-radius: 11px; padding: 10px 36px 10px 13px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 700; }
     .bookmaker-select { min-width: 210px; }
+    .minimum-odd-filter { min-width: 126px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 11px; padding: 5px 8px 5px 11px; background: var(--paper); }
+    .minimum-odd-filter span { color: var(--muted); font-size: 9px; font-weight: 800; white-space: nowrap; }
+    .minimum-odd-filter input { width: 52px; border: 0; outline: 0; background: transparent; color: var(--ink); font-family: var(--num); font-size: 12px; font-weight: 700; text-align: right; }
     .section-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin: 30px 0 16px; }
     .section-head h2 { margin: 0; font-size: 23px; letter-spacing: -.04em; }
     .section-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
     .result-count { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .chance-ranking { display: grid; gap: 8px; }
+    .chance-row { display: grid; grid-template-columns: 42px minmax(190px,1.25fr) minmax(180px,1fr) 92px 94px 72px; align-items: center; gap: 13px; min-height: 76px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); }
+    .chance-row:first-child { border-color: #bfe58e; background: linear-gradient(100deg,#f6ffe9,#fff 38%); }
+    .chance-rank { color: #7b8795; font-family: var(--num); font-size: 13px; font-weight: 700; text-align: center; }
+    .chance-fixture,.chance-selection { min-width: 0; }
+    .chance-fixture b,.chance-selection b { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .chance-fixture span,.chance-selection span { display: block; margin-top: 4px; overflow: hidden; color: var(--muted); font-size: 8px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .verified-signal { color: #537f22 !important; }
+    .chance-probability span { display: block; color: var(--muted); font-size: 7px; font-weight: 800; text-transform: uppercase; }
+    .chance-probability strong { display: block; margin-top: 3px; color: #47751b; font-family: var(--num); font-size: 18px; }
+    .chance-open { border: 1px solid var(--line); border-radius: 9px; padding: 9px 8px; background: white; color: var(--blue); font-size: 9px; font-weight: 800; }
+    .signal-section-head { margin-top: 40px; }
     .pick-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
     .pick-card { min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 22px; box-shadow: 0 3px 10px rgba(11,18,32,.025); transition: transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
     .pick-card:hover { transform: translateY(-2px); border-color: #d4d9e1; box-shadow: var(--shadow); }
@@ -233,6 +248,8 @@
       .hero-summary { grid-template-columns: repeat(3,1fr); }
       .hero-stat { min-height: 92px; }
       .pick-grid { grid-template-columns: 1fr; }
+      .chance-row { grid-template-columns: 34px minmax(160px,1.3fr) minmax(150px,1fr) 82px 88px; }
+      .chance-open { display: none; }
       .match-row { grid-template-columns: 50px 1fr auto; gap: 10px; }
       .match-model { display: none; }
       .market-chip-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
@@ -254,7 +271,13 @@
       .controls { align-items: stretch; flex-direction: column; gap: 10px; }
       .select-filters { display: grid; grid-template-columns: 1fr; }
       .league-select { width: 100%; }
+      .minimum-odd-filter { width: 100%; justify-content: space-between; padding: 9px 12px; }
+      .minimum-odd-filter input { width: 80px; }
       .section-head { align-items: start; flex-direction: column; gap: 8px; }
+      .chance-row { grid-template-columns: 30px minmax(0,1fr) 68px; gap: 8px; padding: 11px 9px; }
+      .chance-selection { grid-column: 2 / -1; grid-row: 2; }
+      .chance-row .odd-pill { grid-column: 2 / -1; grid-row: 3; }
+      .chance-probability { grid-column: 3; grid-row: 1; }
       .pick-card { padding: 17px; border-radius: 18px; }
       .tip-line { grid-template-columns: 66px minmax(0,1fr) auto; gap: 8px; padding: 10px 12px; }
       .tip-line-name { font-size: 12px; }
@@ -314,10 +337,12 @@
         <button class="view-tab" data-view="matches">Alle wedstrijden <span class="count" id="match-count"></span></button>
         <button class="view-tab" data-view="bets">Onze bets</button>
       </nav>
-      <div class="controls"><div class="date-chips" id="date-chips" aria-label="Filter op datum"></div><div class="select-filters"><select class="league-select" id="league-select" aria-label="Filter op competitie"></select><select class="league-select bookmaker-select" id="bookmaker-select" aria-label="Kies bookmaker"></select></div></div>
+      <div class="controls"><div class="date-chips" id="date-chips" aria-label="Filter op datum"></div><div class="select-filters"><label class="minimum-odd-filter"><span>Minimum odd</span><input id="minimum-odd" inputmode="decimal" value="1,30" aria-label="Minimum odd"></label><select class="league-select" id="league-select" aria-label="Filter op competitie"></select><select class="league-select bookmaker-select" id="bookmaker-select" aria-label="Kies bookmaker"></select></div></div>
       <section id="tips-view">
-        <div class="section-head"><div><h2>Uitgelichte wedstrijden</h2><p>Drie modeltips per wedstrijd: hoofdselectie, fulltime en BTTS.</p></div><div class="result-count" id="tip-result-count"></div></div>
-        <div class="pick-grid" id="pick-grid"></div><div class="more-wrap hidden" id="more-wrap"><button class="more-button" id="more-button">Toon alle selecties</button></div>
+        <div class="section-head"><div><h2>Beste kansen boven je minimum odd</h2><p>Alle actuele, gecontroleerde markten; automatisch gesorteerd op hoogste modelkans.</p></div><div class="result-count" id="tip-result-count"></div></div>
+        <div class="chance-ranking" id="chance-ranking"></div><div class="more-wrap hidden" id="more-wrap"><button class="more-button" id="more-button">Toon alle selecties</button></div>
+        <div class="section-head signal-section-head"><div><h2>Uitgelichte signaalwedstrijden</h2><p>Drie modeltips per wedstrijd: hoofdselectie, fulltime en BTTS.</p></div></div>
+        <div class="pick-grid" id="pick-grid"></div>
       </section>
       <section id="matches-view" class="hidden">
         <div class="section-head"><div><h2>Volledig programma</h2><p>Inclusief wedstrijden waarvoor het model bewust geen tip geeft.</p></div><div class="result-count" id="match-result-count"></div></div>
@@ -445,8 +470,8 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
-  <script src="aftrap-app.js?v=20260829-3"></script>
+  <script src="aftrap-app.js?v=20260829-4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
-  <script src="aftrap-account.js?v=20260829-3"></script>
+  <script src="aftrap-account.js?v=20260829-4"></script>
 </body>
 </html>

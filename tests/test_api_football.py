@@ -116,6 +116,18 @@ class ApiFootballStorageTests(unittest.TestCase):
             canonical_odd_selection("Goals Over/Under - First Half", "Under 1.5"),
             "fh_under_1.5",
         )
+        self.assertEqual(
+            canonical_odd_selection("Home Team Goals", "Over", "1.5"),
+            "home_over_1.5",
+        )
+        self.assertIsNone(canonical_odd_selection("Second Half Winner", "Home"))
+        self.assertIsNone(canonical_odd_selection("Corners Winner", "Home"))
+        self.assertIsNone(
+            canonical_odd_selection("Both Teams Score - First Half", "Yes")
+        )
+        self.assertIsNone(
+            canonical_odd_selection("Goals Over/Under - Second Half", "Over 1.5")
+        )
 
     def test_odds_loader_stores_bookmakers_and_replaces_snapshot(self):
         fixture_id, _, _ = store_fixture(self.conn, "EPL", FIXTURE)
@@ -131,6 +143,12 @@ class ApiFootballStorageTests(unittest.TestCase):
                             {"value": "Draw", "odd": "3.40"},
                             {"value": "Away", "odd": "4.10"},
                         ],
+                    }, {
+                        "id": 3, "name": "Second Half Winner", "values": [
+                            {"value": "Home", "odd": "9.00"},
+                            {"value": "Draw", "odd": "8.00"},
+                            {"value": "Away", "odd": "7.00"},
+                        ],
                     }],
                 }],
             }],
@@ -144,6 +162,7 @@ class ApiFootballStorageTests(unittest.TestCase):
         self.assertEqual(result["with_odds"], 1)
         self.assertEqual(result["bookmakers"], 1)
         self.assertEqual(result["rows"], 3)
+        self.assertTrue(result["mapping_reset"])
         row = self.conn.execute(
             """SELECT bookmaker_name, selection_key, odd FROM fixture_odds
                WHERE fixture_id=? AND selection_key='home'""",
@@ -162,6 +181,7 @@ class ApiFootballStorageTests(unittest.TestCase):
                 self.conn, "secret", date(2026, 9, 1), horizon_days=7
             )
         self.assertEqual(result["rows"], 0)
+        self.assertFalse(result["mapping_reset"])
         count = self.conn.execute(
             "SELECT COUNT(*) n FROM fixture_odds WHERE fixture_id=?", (fixture_id,)
         ).fetchone()["n"]

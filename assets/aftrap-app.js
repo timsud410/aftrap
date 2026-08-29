@@ -8,7 +8,7 @@
     low: { score: 2, label: "voorzichtig", bars: 1 },
     thin_data: { score: 1, label: "beperkte historie", bars: 1 },
   };
-  const state = { view: "tips", date: "all", league: "all", bookmaker: "best", expanded: false, detailMarket: null };
+  const state = { view: "tips", date: "all", league: "all", bookmaker: "best", minimumOdd: 1.30, expanded: false, detailMarket: null };
   const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
   const pct = value => Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 100)}%` : "—";
@@ -59,7 +59,8 @@
 
   function selectedOdd(fixture, key, bookmaker = state.bookmaker) {
     const available = (fixture.odds || []).filter(odd => odd.s === key && (bookmaker === "best" || odd.b === bookmaker));
-    return available.sort((a, b) => Number(b.o) - Number(a.o))[0] || null;
+    const fresh = available.filter(odd => (oddAge(odd) ?? 0) <= 6);
+    return (fresh.length ? fresh : available).sort((a, b) => Number(b.o) - Number(a.o))[0] || null;
   }
 
   function oddAge(odd) {
@@ -76,6 +77,27 @@
       fairMarketProbability: found.f == null ? null : Number(found.f),
       edgePp: found.f == null ? null : (Number(probability) - Number(found.f)) * 100,
     };
+  }
+
+  function parseMinimumOdd(raw) {
+    const parsed = Number(String(raw).trim().replace(",", "."));
+    return Number.isFinite(parsed) && parsed >= 1.01 ? parsed : 1.30;
+  }
+
+  function rankedSelections() {
+    return filteredFixtures().flatMap(fixture => Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
+      if (key.endsWith("clean_sheet")) return [];
+      const probability = Number(rawProbability);
+      const odd = selectedOdd(fixture, key);
+      if (!odd || !Number.isFinite(probability) || Number(odd.o) < state.minimumOdd || (oddAge(odd) ?? 0) > 6) return [];
+      const reference = odd.f == null ? 1 / Number(odd.o) : Number(odd.f);
+      return [{ fixture, key, probability, odd, edge: probability - reference, verified: fixture.tips.some(tip => tip.raw === key) }];
+    })).sort((a, b) => b.probability - a.probability || b.edge - a.edge || Number(b.odd.o) - Number(a.odd.o));
+  }
+
+  function chanceRow(item, index) {
+    const { fixture, key, probability, verified } = item;
+    return `<article class="chance-row"><span class="chance-rank">#${index + 1}</span><div class="chance-fixture"><b>${esc(teamName(fixture.home))} – ${esc(teamName(fixture.away))}</b><span>${esc(shortDate(fixture.date))} · ${esc(fixture.kickoff || "tijd n.n.b.")} · ${esc(fixture.league)}</span></div><div class="chance-selection"><b>${esc(marketLabel(key, fixture))}</b><span class="${verified ? "verified-signal" : ""}">${esc(marketGroup(key))}${verified ? " · gevalideerd signaal" : " · modelmarkt"}</span></div><div class="chance-probability"><span>Modelkans</span><strong>${pct(probability)}</strong></div>${oddBlock(fixture, { key, p: probability })}<button class="chance-open" type="button" data-open-match="${esc(fixture.id)}" data-open-market="${esc(key)}">Details</button></article>`;
   }
 
   function oddBlock(fixture, row, compact = false, bookmaker = null) {
@@ -135,12 +157,16 @@
   }
 
   function renderTips() {
+    const ranking = rankedSelections();
+    const visibleRanking = state.expanded ? ranking : ranking.slice(0, 12);
+    const minimum = oddText(state.minimumOdd);
+    document.getElementById("tip-result-count").textContent = `${ranking.length} ${ranking.length === 1 ? "selectie" : "selecties"} vanaf @${minimum}`;
+    document.getElementById("chance-ranking").innerHTML = ranking.length ? visibleRanking.map(chanceRow).join("") : `<div class="empty">Geen actuele quoteringen vanaf @${minimum} voor deze filters.</div>`;
+    document.getElementById("more-wrap").classList.toggle("hidden", state.expanded || ranking.length <= 12);
+    document.getElementById("more-button").textContent = `Toon alle ${ranking.length} selecties`;
+
     const tips = filteredFixtures().filter(f => f.tips.length).map(fixture => ({ fixture, tip: bestTip(fixture) })).sort((a, b) => (BAND[b.tip.b]?.score || 0) - (BAND[a.tip.b]?.score || 0) || b.tip.p - a.tip.p || a.fixture.date.localeCompare(b.fixture.date));
-    const visible = state.expanded ? tips : tips.slice(0, 8);
-    document.getElementById("tip-result-count").textContent = `${tips.length} ${tips.length === 1 ? "wedstrijd" : "wedstrijden"}`;
-    document.getElementById("pick-grid").innerHTML = tips.length ? visible.map(({ fixture, tip }, index) => pickCard(fixture, tip, index)).join("") : `<div class="empty">Voor deze filters zijn geen uitgelichte wedstrijden gevonden.</div>`;
-    document.getElementById("more-wrap").classList.toggle("hidden", state.expanded || tips.length <= 8);
-    document.getElementById("more-button").textContent = `Toon alle ${tips.length} wedstrijden`;
+    document.getElementById("pick-grid").innerHTML = tips.length ? tips.slice(0, 8).map(({ fixture, tip }, index) => pickCard(fixture, tip, index)).join("") : `<div class="empty">Voor deze filters zijn geen uitgelichte signaalwedstrijden gevonden.</div>`;
   }
 
   function compactOdd(fixture, key) {
@@ -226,7 +252,7 @@
       const chip = event.target.closest("[data-date]");
       if (chip) { state.date = chip.dataset.date; state.expanded = false; document.querySelectorAll(".date-chip").forEach(node => node.classList.toggle("active", node === chip)); renderAll(); }
       const open = event.target.closest("[data-open-match]");
-      if (open) openMatch(open.dataset.openMatch);
+      if (open) openMatch(open.dataset.openMatch, open.dataset.openMarket || null);
       const market = event.target.closest("[data-detail-market]");
       if (market) openMatch(market.dataset.fixtureId, market.dataset.detailMarket);
       const add = event.target.closest("[data-add-bet]");
@@ -234,6 +260,16 @@
     });
     document.getElementById("league-select").addEventListener("change", event => { state.league = event.target.value; state.expanded = false; renderAll(); });
     document.getElementById("bookmaker-select").addEventListener("change", event => { state.bookmaker = event.target.value; renderAll(); });
+    const minimumOdd = document.getElementById("minimum-odd");
+    minimumOdd.addEventListener("input", event => {
+      if (!/^\d+(?:[.,]\d{1,2})?$/.test(event.target.value.trim())) return;
+      const parsed = parseMinimumOdd(event.target.value);
+      if (parsed < 1.01) return;
+      state.minimumOdd = parsed;
+      state.expanded = false;
+      renderTips();
+    });
+    minimumOdd.addEventListener("blur", event => { event.target.value = oddText(state.minimumOdd); });
     document.getElementById("more-button").addEventListener("click", () => { state.expanded = true; renderTips(); });
     const helpDialog = document.getElementById("help-dialog");
     document.getElementById("open-help").addEventListener("click", () => helpDialog.showModal());
