@@ -18,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="aftrap-account.css">
   <style>
     :root {
       --navy: #0b1220; --navy-2: #131d30; --ink: #111827; --muted: #667085;
@@ -199,11 +200,29 @@
     }
   </style>
 </head>
-<body>
+<body class="auth-pending">
+  <section class="auth-gate" id="auth-gate" aria-label="Inloggen bij Aftrap">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="auth-brand-mark">A</span><div><b>Aftrap</b><span>Persoonlijke voetbalanalyse</span></div></div>
+      <h1>Welkom terug.</h1>
+      <p>Log veilig in met je e-mailadres. Je ontvangt een eenmalige code of inloglink; een wachtwoord is niet nodig.</p>
+      <form class="auth-form" id="email-form">
+        <label class="auth-label">E-mailadres<input class="auth-input" id="auth-email" name="email" type="email" autocomplete="email" required placeholder="jij@voorbeeld.nl"></label>
+        <button class="auth-submit" id="request-code" type="submit">Stuur inlogmail</button>
+      </form>
+      <form class="auth-form hidden" id="otp-form">
+        <div class="auth-label">Code voor <strong id="otp-email-copy"></strong></div>
+        <label class="auth-label">Zescijferige code<input class="auth-input auth-code" id="auth-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000"></label>
+        <button class="auth-submit" id="verify-code" type="submit">Inloggen</button>
+        <button class="auth-back" id="auth-back" type="button">Ander e-mailadres gebruiken</button>
+      </form>
+      <div class="auth-status" id="auth-status" role="status" aria-live="polite"></div>
+    </div>
+  </section>
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand"><div class="brand-mark" aria-hidden="true">A</div><div class="brand-name">Aftrap</div><div class="brand-tagline">Modelselecties voor voetbal</div></div>
-      <div class="top-meta"><span class="live-dot"></span><span>Bijgewerkt __GENERATED__</span><button class="help-button" id="open-help">Hoe werkt dit?</button></div>
+      <div class="top-meta"><span class="live-dot"></span><span>Bijgewerkt __GENERATED__</span><button class="help-button" id="open-help">Hoe werkt dit?</button><button class="account-button hidden" id="account-button" type="button" title="Uitloggen"><b id="account-name">Account</b><span>Uitloggen</span></button></div>
     </div>
   </header>
   <main class="shell">
@@ -220,6 +239,7 @@
       <nav class="view-tabs" aria-label="Weergave">
         <button class="view-tab active" data-view="tips">Uitgelicht <span class="count" id="tip-count"></span></button>
         <button class="view-tab" data-view="matches">Alle wedstrijden <span class="count" id="match-count"></span></button>
+        <button class="view-tab" data-view="bets">Mijn bets</button>
       </nav>
       <div class="controls"><div class="date-chips" id="date-chips" aria-label="Filter op datum"></div><select class="league-select" id="league-select" aria-label="Filter op competitie"></select></div>
       <section id="tips-view">
@@ -229,6 +249,33 @@
       <section id="matches-view" class="hidden">
         <div class="section-head"><div><h2>Volledig programma</h2><p>Inclusief wedstrijden waarvoor het model bewust geen tip geeft.</p></div><div class="result-count" id="match-result-count"></div></div>
         <div class="matches" id="matches"></div>
+      </section>
+      <section id="bets-view" class="hidden">
+        <div class="bets-head"><div><h2>Mijn bets</h2><p>Leg je inzetten vast, wikkel resultaten af en zie wat keuzes met je bankroll doen.</p></div><button class="primary-action" id="new-bet" type="button">+ Nieuwe bet</button></div>
+        <div class="bets-summary" id="bets-summary"></div>
+        <div class="bets-layout">
+          <div class="bet-panel">
+            <div class="bet-panel-head"><div><h3>Betgeschiedenis</h3><p>Alleen zichtbaar binnen jouw account</p></div><div class="bet-filters"><button class="bet-filter active" data-bet-filter="all" type="button">Alles</button><button class="bet-filter" data-bet-filter="open" type="button">Open</button><button class="bet-filter" data-bet-filter="settled" type="button">Afgerond</button></div></div>
+            <div class="bet-list" id="bet-list"><div class="loading-block">Bets laden…</div></div>
+          </div>
+          <aside>
+            <div class="bet-panel">
+              <div class="bet-panel-head"><div><h3>Startbankroll</h3><p>Basis voor je persoonlijke resultaten</p></div></div>
+              <div class="bankroll-row"><input class="scenario-input" id="bankroll-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Bijv. 250,00" aria-label="Startbankroll"><button class="secondary-action" id="save-bankroll" type="button">Opslaan</button></div>
+              <div class="bets-message" id="bankroll-message" role="status"></div>
+            </div>
+            <div class="bet-panel">
+              <div class="bet-panel-head"><div><h3>Wat-als rekenaar</h3><p>Vergelijk drie inzetten vóórdat je iets vastlegt</p></div></div>
+              <label class="bet-label">Bankroll voor vergelijking<input class="scenario-input" id="scenario-bankroll" type="number" min="0" step="0.01" inputmode="decimal" value="100"></label>
+              <div class="scenario-grid">
+                <article class="scenario-card"><div class="scenario-card-head"><b>Scenario A</b><span>voorzichtig</span></div><div class="scenario-fields"><label class="scenario-field"><span>Inzet €</span><input class="scenario-input" data-scenario-stake type="number" min="0" step="0.01" value="5"></label><label class="scenario-field"><span>Quotering</span><input class="scenario-input" data-scenario-odds type="number" min="1.01" step="0.01" value="1.75"></label><label class="scenario-field"><span>Kans %</span><input class="scenario-input" data-scenario-chance type="number" min="0" max="100" step="1" value="60"></label></div><div class="scenario-output" data-scenario-output></div></article>
+                <article class="scenario-card"><div class="scenario-card-head"><b>Scenario B</b><span>gemiddeld</span></div><div class="scenario-fields"><label class="scenario-field"><span>Inzet €</span><input class="scenario-input" data-scenario-stake type="number" min="0" step="0.01" value="10"></label><label class="scenario-field"><span>Quotering</span><input class="scenario-input" data-scenario-odds type="number" min="1.01" step="0.01" value="2.10"></label><label class="scenario-field"><span>Kans %</span><input class="scenario-input" data-scenario-chance type="number" min="0" max="100" step="1" value="50"></label></div><div class="scenario-output" data-scenario-output></div></article>
+                <article class="scenario-card"><div class="scenario-card-head"><b>Scenario C</b><span>offensief</span></div><div class="scenario-fields"><label class="scenario-field"><span>Inzet €</span><input class="scenario-input" data-scenario-stake type="number" min="0" step="0.01" value="20"></label><label class="scenario-field"><span>Quotering</span><input class="scenario-input" data-scenario-odds type="number" min="1.01" step="0.01" value="3.00"></label><label class="scenario-field"><span>Kans %</span><input class="scenario-input" data-scenario-chance type="number" min="0" max="100" step="1" value="35"></label></div><div class="scenario-output" data-scenario-output></div></article>
+              </div>
+              <p class="dialog-note">De verwachte waarde gebruikt de kans die je zelf invult. Dit is een rekentool, geen inzetadvies.</p>
+            </div>
+          </aside>
+        </div>
       </section>
     </section>
     <section class="trust-strip" aria-label="Betrouwbaarheid">
@@ -245,9 +292,31 @@
         <div class="how-step"><b>Begin bij ‘Modelselecties’</b><p>Aftrap controleert het hele programma, maar laat standaard alleen wedstrijden met voldoende bewijs zien.</p></div>
         <div class="how-step"><b>Lees de drie regels als één modelbeeld</b><p>De hoofdselectie is historisch getoetst. Fulltime en BTTS tonen daarnaast de hoogste berekende kans binnen die markt.</p></div>
         <div class="how-step"><b>Open de cijfers als je alles wilt zien</b><p>Onder iedere wedstrijd staan alle 1X2-, Over/Under-, BTTS- en verwachte-goalscijfers, plus recente schotvorm van spelers als die beschikbaar is.</p></div>
+        <div class="how-step"><b>Houd je eigen keuzes apart bij</b><p>Onder ‘Mijn bets’ registreer je inzetten en resultaten. Met drie wat-als scenario’s vergelijk je vooraf bankroll, rendement en risico.</p></div>
       </div>
       <p class="dialog-note"><b>Belangrijk:</b> Aftrap gebruikt geen live bookmakerquoteringen en geeft geen inzetadvies. Een hoge modelkans is geen garantie op winst.</p>
     </div>
+  </dialog>
+  <dialog class="bet-dialog" id="bet-dialog">
+    <div class="bet-dialog-head"><div><h2 id="bet-dialog-title">Nieuwe bet</h2><p>Alle bedragen en quoteringen kun je later nog aanpassen.</p></div><button class="dialog-close" id="close-bet-dialog" type="button" aria-label="Sluiten">×</button></div>
+    <form class="bet-dialog-body" id="bet-form">
+      <input id="bet-id" type="hidden">
+      <div class="bet-form-grid">
+        <label class="bet-label">Type<select class="bet-select" id="bet-kind"><option value="single">Single</option><option value="combi">Combinatie</option></select></label>
+        <label class="bet-label">Datum geplaatst<input class="bet-input" id="bet-placed-at" type="date" required></label>
+        <label class="bet-label full">Wedstrijd / omschrijving<input class="bet-input" id="bet-description" list="fixture-options" required placeholder="Bijv. Ajax – PSV"><datalist id="fixture-options"></datalist></label>
+        <label class="bet-label">Markt<input class="bet-input" id="bet-market" placeholder="Bijv. BTTS"></label>
+        <label class="bet-label">Selectie<input class="bet-input" id="bet-selection" placeholder="Bijv. Ja"></label>
+        <label class="bet-label">Inzet (€)<input class="bet-input" id="bet-stake" type="number" min="0.01" step="0.01" inputmode="decimal" required></label>
+        <label class="bet-label">Quotering<input class="bet-input" id="bet-odds" type="number" min="1.01" step="0.01" inputmode="decimal" required></label>
+        <label class="bet-label">Wedstrijddatum<input class="bet-input" id="bet-event-date" type="date"></label>
+        <label class="bet-label">Bookmaker<input class="bet-input" id="bet-bookmaker" placeholder="Optioneel"></label>
+        <label class="bet-label full hidden" id="bet-legs-wrap">Combinatiepoten, één per regel<textarea class="bet-textarea" id="bet-legs" placeholder="Ajax wint&#10;Over 2,5 goals"></textarea></label>
+        <label class="bet-label full">Notities<textarea class="bet-textarea" id="bet-notes" placeholder="Waarom koos je deze bet?"></textarea></label>
+      </div>
+      <div class="bets-message" id="bet-form-message" role="status"></div>
+      <div class="bet-form-actions"><button class="secondary-action" id="cancel-bet" type="button">Annuleren</button><button class="primary-action" id="save-bet" type="submit">Bet opslaan</button></div>
+    </form>
   </dialog>
   <script>
     const DATA = /*__DATA__*/[];
@@ -275,7 +344,7 @@
     function renderTips(){ const tips=filteredFixtures().filter(fixture=>fixture.tips.length).map(fixture=>({fixture,tip:bestTip(fixture)})).sort((a,b)=>(BAND[b.tip.b]?.score||0)-(BAND[a.tip.b]?.score||0)||b.tip.p-a.tip.p||a.fixture.date.localeCompare(b.fixture.date)); const visible=state.expanded?tips:tips.slice(0,8); document.getElementById("tip-result-count").textContent=`${tips.length} ${tips.length===1?"wedstrijd":"wedstrijden"}`; document.getElementById("pick-grid").innerHTML=tips.length?visible.map(({fixture,tip},index)=>pickCard(fixture,tip,index)).join(""):`<div class="empty">Voor deze filters zijn geen uitgelichte wedstrijden gevonden.</div>`; document.getElementById("more-wrap").classList.toggle("hidden",state.expanded||tips.length<=8); document.getElementById("more-button").textContent=`Toon alle ${tips.length} wedstrijden`; }
     function renderMatches(){ const fixtures=filteredFixtures(); const groups=[]; for(const fixture of fixtures){ let group=groups.find(g=>g.date===fixture.date); if(!group){group={date:fixture.date,fixtures:[]};groups.push(group);} group.fixtures.push(fixture); } document.getElementById("match-result-count").textContent=`${fixtures.length} ${fixtures.length===1?"wedstrijd":"wedstrijden"}`; document.getElementById("matches").innerHTML=groups.length?groups.map(group=>`<section class="match-day"><div class="match-day-head">${esc(longDate(group.date))}</div>${group.fixtures.map(f=>`<div class="match-row"><div class="match-time">${esc(f.kickoff||"—")}</div><div><div class="match-teams">${esc(teamName(f.home))}<span>—</span>${esc(teamName(f.away))}</div><div class="match-league">${esc(f.league)}</div></div><div class="match-model"><span>1 <b>${pct(f.p_home)}</b></span><span>X <b>${pct(f.p_draw)}</b></span><span>2 <b>${pct(f.p_away)}</b></span><span>O2.5 <b>${pct(f.p_over25)}</b></span></div><div class="match-tip ${f.tips.length?"":"none"}">${f.tips.length?`${f.tips.length} ${f.tips.length===1?"selectie":"selecties"}`:"Geen selectie"}</div></div>`).join("")}</section>`).join(""):`<div class="empty">Geen wedstrijden gevonden.</div>`; }
     function renderAll(){renderTips();renderMatches();}
-    document.addEventListener("click",event=>{ const tab=event.target.closest("[data-view]"); if(tab){state.view=tab.dataset.view;document.querySelectorAll(".view-tab").forEach(el=>{el.classList.toggle("active",el===tab);el.setAttribute("aria-selected",el===tab?"true":"false");});document.getElementById("tips-view").classList.toggle("hidden",state.view!=="tips");document.getElementById("matches-view").classList.toggle("hidden",state.view!=="matches");} const chip=event.target.closest("[data-date]"); if(chip){state.date=chip.dataset.date;state.expanded=false;document.querySelectorAll(".date-chip").forEach(el=>el.classList.toggle("active",el===chip));renderAll();} });
+    document.addEventListener("click",event=>{ const tab=event.target.closest("[data-view]"); if(tab){state.view=tab.dataset.view;document.querySelectorAll(".view-tab").forEach(el=>{el.classList.toggle("active",el===tab);el.setAttribute("aria-selected",el===tab?"true":"false");});document.getElementById("tips-view").classList.toggle("hidden",state.view!=="tips");document.getElementById("matches-view").classList.toggle("hidden",state.view!=="matches");document.getElementById("bets-view").classList.toggle("hidden",state.view!=="bets");document.querySelector(".controls").classList.toggle("hidden",state.view==="bets");if(state.view==="bets")window.AftrapAccount?.refresh();} const chip=event.target.closest("[data-date]"); if(chip){state.date=chip.dataset.date;state.expanded=false;document.querySelectorAll(".date-chip").forEach(el=>el.classList.toggle("active",el===chip));renderAll();} });
     document.getElementById("league-select").addEventListener("change",event=>{state.league=event.target.value;state.expanded=false;renderAll();});
     document.getElementById("more-button").addEventListener("click",()=>{state.expanded=true;renderTips();});
     const helpDialog=document.getElementById("help-dialog");
@@ -284,5 +353,7 @@
     helpDialog.addEventListener("click",event=>{if(event.target===helpDialog)helpDialog.close();});
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
+  <script src="aftrap-account.js"></script>
 </body>
 </html>

@@ -24,6 +24,8 @@ import db as store
 HERE = Path(__file__).resolve().parent
 SITE = HERE / "site"
 SOCIAL_CARD = HERE / "assets" / "aftrap-og.png"
+ACCOUNT_JS = HERE / "assets" / "aftrap-account.js"
+ACCOUNT_CSS = HERE / "assets" / "aftrap-account.css"
 
 # Hoeveel seizoenen we inladen. Meer is beter voor het toetsen van signalen;
 # vanaf ongeveer 2010 is de dekking van schoten en corners in de meeste
@@ -61,6 +63,8 @@ def main() -> int:
             raise RuntimeError("tips genereren mislukt")
         if SOCIAL_CARD.exists():
             shutil.copy2(SOCIAL_CARD, SITE / "aftrap-og.png")
+        shutil.copy2(ACCOUNT_JS, SITE / ACCOUNT_JS.name)
+        shutil.copy2(ACCOUNT_CSS, SITE / ACCOUNT_CSS.name)
 
     def load_upcoming() -> None:
         api_key = os.environ.get("API_FOOTBALL_KEY", "").strip()
