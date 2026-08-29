@@ -504,6 +504,7 @@ def _fixture_odds(conn: sqlite3.Connection, fixture_id: int) -> tuple[list[dict]
     movement = [{
         "b": values[-1]["bookmaker_name"], "s": selection,
         "a": round(float(values[0]["odd"]), 3),
+        "c": round(float(values[-1]["odd"]), 3),
         "n": len(values),
     } for (_, selection), values in history.items()]
     return current, movement

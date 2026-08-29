@@ -174,6 +174,7 @@ class ApiFootballStorageTests(unittest.TestCase):
         self.assertAlmostEqual(sum(item["f"] for item in current), 1.0, places=3)
         self.assertEqual(len(movement), 3)
         self.assertTrue(all(item["n"] == 1 for item in movement))
+        self.assertTrue(all(item["a"] == item["c"] for item in movement))
 
         empty = {"response": [], "paging": {"current": 1, "total": 1}}
         with patch("load_api_football.api_get", return_value=empty):
