@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-4"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-7"',
+            'src="aftrap-app.js?v=20260829-8"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -100,10 +100,23 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("Value #${index + 1}", self.app_js)
         self.assertIn('data-open-market="${esc(card.action.key)}"', self.app_js)
         self.assertIn("Model ${pct(item.probability)} · markt", self.app_js)
+        self.assertIn("grid-template-columns: repeat(4,minmax(0,1fr))", self.template)
+        self.assertNotIn('{ label: "Wedstrijden"', self.app_js)
+        self.assertNotIn('{ label: "Beschikbare kansen"', self.app_js)
         self.assertNotIn('{ label: "Bookmakers"', self.app_js)
         self.assertNotIn('{ label: "Odds bijgewerkt"', self.app_js)
+
+    def test_mobile_safe_area_and_dialog_state_are_stable(self):
+        self.assertIn(".topbar { position: fixed; right: 0; left: 0; }", self.template)
+        self.assertIn("calc(75px + env(safe-area-inset-top))", self.template)
+        self.assertIn("shouldResetScroll", self.app_js)
+        self.assertIn("dialog.scrollTop = 0", self.app_js)
         self.assertNotIn("Zie direct waar het model wél iets ziet.</h1>", self.template)
         self.assertNotIn('class="trust-strip"', self.template)
+
+    def test_selected_bookmaker_is_preserved_when_adding_a_bet(self):
+        self.assertIn('data-bookmaker="${esc(found.b)}"', self.app_js)
+        self.assertIn("button.dataset.bookmaker || state.bookmaker", self.app_js)
 
     def test_ranking_has_market_and_sort_controls(self):
         self.assertIn('id="market-select"', self.template)

@@ -154,7 +154,7 @@
     const edge = Number(row.p) - reference;
     const stale = (oddAge(found) ?? 0) > 6;
     const label = found.f == null ? "break-even" : "markt zonder marge";
-    return `<button class="odd-pill ${edge > 0 ? "value" : ""} ${stale ? "stale" : ""}" type="button" data-add-bet data-fixture-id="${esc(fixture.id)}" data-selection-key="${esc(row.key)}" title="Model ${pct(row.p)} · ${label} ${pct(reference)} · klik om als bet toe te voegen"><b>@ ${oddText(found.o)}</b><small>${esc(found.b)} · ${pp(edge)}${stale ? " · oud" : ""}</small>${compact ? "" : "<i>+ bet</i>"}</button>`;
+    return `<button class="odd-pill ${edge > 0 ? "value" : ""} ${stale ? "stale" : ""}" type="button" data-add-bet data-fixture-id="${esc(fixture.id)}" data-selection-key="${esc(row.key)}" data-bookmaker="${esc(found.b)}" title="Model ${pct(row.p)} · ${label} ${pct(reference)} · klik om als bet toe te voegen"><b>@ ${oddText(found.o)}</b><small>${esc(found.b)} · ${pp(edge)}${stale ? " · oud" : ""}</small>${compact ? "" : "<i>+ bet</i>"}</button>`;
   }
 
   function confidenceBars(band) {
@@ -191,8 +191,6 @@
   }
 
   function renderDashboardStats(ranking) {
-    const fixtures = filteredFixtures();
-    const leagues = new Set(fixtures.map(fixture => fixture.league)).size;
     const topChance = [...ranking].sort((a, b) => b.probability - a.probability)[0];
     const valueTips = [...ranking].filter(item => item.edge > 0).sort((a, b) => b.edge - a.edge || b.probability - a.probability).filter((item, index, all) => all.findIndex(candidate => String(candidate.fixture.id) === String(item.fixture.id)) === index).slice(0, 3);
     const tipCard = (label, item, value, comparison = "") => item ? {
@@ -202,8 +200,6 @@
     } : { label, value: "—", detail: `Geen actuele tip vanaf @${oddText(state.minimumOdd)}` };
     const valueCard = (item, index) => tipCard(index === 0 ? "Beste value" : `Value #${index + 1}`, item, item ? pp(item.edge) : "—", item ? `Model ${pct(item.probability)} · markt ${pct(item.probability - item.edge)}` : "");
     const cards = [
-      { label: "Wedstrijden", value: fixtures.length, detail: `${leagues} ${leagues === 1 ? "competitie" : "competities"}` },
-      { label: "Beschikbare kansen", value: ranking.length, detail: `vanaf @${oddText(state.minimumOdd)}` },
       { ...tipCard("Hoogste modelkans", topChance, topChance ? pct(topChance.probability) : "—"), primary: true },
       ...[0, 1, 2].map(index => valueCard(valueTips[index], index)),
     ];
@@ -298,14 +294,20 @@
     const form = fixture.form || {};
     document.getElementById("match-dialog-body").innerHTML = `<div class="match-overview"><div><span>Verwachte goals</span><strong>${Number(fixture.lambda_home).toFixed(2)} – ${Number(fixture.lambda_away).toFixed(2)}</strong></div><div><span>Thuis / gelijk / uit</span><strong>${pct(fixture.p_home)} · ${pct(fixture.p_draw)} · ${pct(fixture.p_away)}</strong></div><div><span>Databron model</span><strong>${esc(fixture.xg_source || "model")}</strong></div></div><section class="detail-section"><div class="detail-section-head"><h3>Teamvorm</h3><span>laatste ${form.window || 10} competitieduels vóór deze wedstrijd</span></div><div class="team-form-grid"><div><b>${esc(teamName(fixture.home))}</b><span>xG voor ${Number(form.home?.xg_for || 0).toFixed(2)}</span><span>xG tegen ${Number(form.home?.xg_against || 0).toFixed(2)}</span><span>BTTS ${pct(form.home?.btts_rate)}</span></div><div><b>${esc(teamName(fixture.away))}</b><span>xG voor ${Number(form.away?.xg_for || 0).toFixed(2)}</span><span>xG tegen ${Number(form.away?.xg_against || 0).toFixed(2)}</span><span>BTTS ${pct(form.away?.btts_rate)}</span></div></div></section><section class="detail-section"><div class="detail-section-head"><h3>Alle modelmarkten</h3><span>Kies een markt voor bookmakervergelijking</span></div>${Object.entries(grouped).map(([group, items]) => `<div class="market-group"><b>${esc(group)}</b><div class="market-chip-grid">${items.map(item => `<button class="market-chip ${item.key === active.key ? "active" : ""}" type="button" data-detail-market="${esc(item.key)}" data-fixture-id="${esc(fixture.id)}"><span>${esc(marketLabel(item.key, fixture))}</span><strong>${pct(item.probability)}</strong><small>${item.odd ? `@ ${oddText(item.odd.o)}` : "geen odd"}</small></button>`).join("")}</div></div>`).join("")}</section><section class="detail-section"><div class="detail-section-head"><h3>Bookmakers · ${esc(marketLabel(active.key, fixture))}</h3><span>open → actueel · marge verwijderd waar mogelijk</span></div>${renderOddsComparison(fixture, active.key)}</section><section class="detail-section"><div class="detail-section-head"><h3>Spelersvorm</h3><span>schoten op doel uit recente duels</span></div>${playerForm(fixture)}</section>${availabilityBlock(fixture)}`;
     const dialog = document.getElementById("match-dialog");
+    const shouldResetScroll = !dialog.open || dialog.dataset.fixtureId !== String(fixture.id);
+    dialog.dataset.fixtureId = String(fixture.id);
     if (!dialog.open) dialog.showModal();
+    if (shouldResetScroll) {
+      dialog.scrollTop = 0;
+      requestAnimationFrame(() => { dialog.scrollTop = 0; });
+    }
   }
 
   function addBetFromButton(button) {
     const fixture = DATA.find(item => String(item.id) === button.dataset.fixtureId);
     if (!fixture) return;
     const key = button.dataset.selectionKey;
-    const found = selectedOdd(fixture, key);
+    const found = selectedOdd(fixture, key, button.dataset.bookmaker || state.bookmaker);
     const probability = Number((fixture.probs || {})[key] ?? fixture.tips.find(tip => tip.raw === key)?.p);
     if (found && Number.isFinite(probability)) window.AftrapAccount?.openFromTip(betPayload(fixture, key, probability, found));
   }

@@ -56,19 +56,19 @@
     .dashboard-title-row h1 { margin: 0; font-size: 28px; line-height: 1.08; letter-spacing: -.045em; }
     .dashboard-title-row p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
     .dashboard-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
-    .dashboard-stats { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 9px; }
-    .dashboard-stat { position: relative; min-width: 0; min-height: 118px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--ink); text-align: left; }
+    .dashboard-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+    .dashboard-stat { position: relative; min-width: 0; min-height: 148px; padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); color: var(--ink); text-align: left; }
     .dashboard-stat.primary { border-color: #c8e8a1; background: var(--lime-soft); }
     button.dashboard-stat { width: 100%; appearance: none; cursor: pointer; transition: border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
     button.dashboard-stat:hover { border-color: #9dcc63; box-shadow: 0 8px 20px rgba(11,18,32,.08); transform: translateY(-1px); }
     button.dashboard-stat:focus-visible { outline: 3px solid rgba(126,170,77,.28); outline-offset: 2px; }
-    .dashboard-stat span { display: block; overflow: hidden; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
-    .dashboard-stat strong { display: block; margin-top: 7px; overflow: hidden; font-family: var(--num); font-size: 20px; line-height: 1.05; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
+    .dashboard-stat span { display: block; overflow: hidden; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .dashboard-stat strong { display: block; margin-top: 9px; overflow: hidden; font-family: var(--num); font-size: 27px; line-height: 1.05; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
     .dashboard-stat.primary strong { color: #47751b; }
-    .dashboard-stat small { display: block; margin-top: 7px; overflow: hidden; color: #7b8492; font-size: 8px; font-weight: 700; line-height: 1.35; }
-    .dashboard-stat small b { display: block; overflow: hidden; color: #465162; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
-    .dashboard-stat small i { display: block; margin-top: 3px; overflow: hidden; color: #6a7584; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
-    .dashboard-stat small em { display: block; margin-top: 3px; color: #557b2f; font-size: 7px; font-style: normal; }
+    .dashboard-stat small { display: block; margin-top: 10px; overflow: hidden; color: #7b8492; font-size: 9px; font-weight: 700; line-height: 1.4; }
+    .dashboard-stat small b { display: block; overflow: hidden; color: #465162; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .dashboard-stat small i { display: -webkit-box; margin-top: 4px; overflow: hidden; color: #6a7584; font-size: 9px; font-style: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .dashboard-stat small em { display: block; margin-top: 4px; color: #557b2f; font-size: 8px; font-style: normal; }
     .workspace { margin-top: 18px; }
     .view-tabs { display: flex; gap: 6px; width: fit-content; padding: 5px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
     .view-tab { border: 0; border-radius: 9px; padding: 10px 16px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -247,7 +247,7 @@
     .bet-model-context span { color: #59713e; font-size: 8px; }
     .bet-model-context b { display: block; margin-top: 2px; color: #294b0e; font-family: var(--num); font-size: 11px; }
     @media (max-width: 860px) {
-      .dashboard-stats { grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .dashboard-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
       .select-filters { grid-template-columns: 126px repeat(2,minmax(0,1fr)); }
       .pick-grid { grid-template-columns: 1fr; }
       .chance-row { grid-template-columns: 34px minmax(160px,1.3fr) minmax(150px,1fr) 82px 88px; }
@@ -258,17 +258,19 @@
     }
     @media (max-width: 620px) {
       .brand-tagline,.top-meta > span:not(.live-dot) { display: none; }
+      .topbar { position: fixed; right: 0; left: 0; }
       .topbar-inner { min-height: 60px; padding: 0 16px; }
-      .shell { min-height: calc(100vh - 60px); padding: 15px 12px calc(94px + env(safe-area-inset-bottom)); }
+      .shell { min-height: 100vh; padding: calc(75px + env(safe-area-inset-top)) 12px calc(94px + env(safe-area-inset-bottom)); }
       .dashboard-title-row { align-items: start; }
       .dashboard-title-row h1 { font-size: 24px; }
       .dashboard-title-row p { max-width: 240px; font-size: 10px; }
       .dashboard-status { display: none; }
-      .dashboard-stats { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
-      .dashboard-stat { min-height: 112px; padding: 11px; }
-      .dashboard-stat strong { font-size: 18px; }
-      .dashboard-stat small { margin-top: 5px; font-size: 7px; }
-      .dashboard-stat small b,.dashboard-stat small i { font-size: 7px; }
+      .dashboard-stats { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+      .dashboard-stat { min-height: 132px; padding: 13px; }
+      .dashboard-stat strong { font-size: 22px; }
+      .dashboard-stat small { margin-top: 7px; font-size: 8px; }
+      .dashboard-stat small b { font-size: 9px; }
+      .dashboard-stat small i { font-size: 8px; }
       .workspace { margin-top: 13px; }
       .view-tabs { position: fixed; z-index: 35; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom)); left: 10px; width: auto; padding: 5px; border-color: rgba(255,255,255,.14); background: rgba(11,18,32,.97); box-shadow: 0 12px 40px rgba(11,18,32,.3); backdrop-filter: blur(16px); }
       .view-tab { flex: 1; min-width: 0; padding: 10px 5px; color: #aeb8c9; font-size: 10px; white-space: nowrap; }
@@ -482,7 +484,7 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
-  <script src="aftrap-app.js?v=20260829-7"></script>
+  <script src="aftrap-app.js?v=20260829-8"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260829-4"></script>
 </body>
