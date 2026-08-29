@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sqlite3
 import statistics
 import sys
@@ -80,6 +81,31 @@ def best_xg_source(conn: sqlite3.Connection, league: str) -> str | None:
         if s in have:
             return s
     return None
+
+
+def model_history_summary(conn: sqlite3.Connection, cutoff: str) -> dict[str, int | str | None]:
+    """Aantal gespeelde duels met complete modelinput vóór de voorspeldatum.
+
+    De interface liet alleen de effectieve teamweging zien. Daardoor klonk
+    ``beperkte historie`` alsof de hele database leeg was, terwijl dit meestal
+    uitsluitend een promovendus betrof. Deze samenvatting maakt de totale
+    historische basis zichtbaar zonder toekomstige wedstrijden mee te tellen.
+    """
+    row = conn.execute(
+        """SELECT COUNT(DISTINCT f.id) AS matches, MIN(f.match_date) AS first_date
+           FROM fixtures f
+           JOIN fixture_xg xh ON xh.fixture_id = f.id
+             AND xh.team_id = f.home_team_id
+           JOIN fixture_xg xa ON xa.fixture_id = f.id
+             AND xa.team_id = f.away_team_id AND xa.source = xh.source
+           WHERE f.match_date < ?
+             AND f.home_goals IS NOT NULL AND f.away_goals IS NOT NULL""",
+        (cutoff,),
+    ).fetchone()
+    return {
+        "matches": int(row["matches"] or 0),
+        "first_date": row["first_date"],
+    }
 
 
 def load_observations(
@@ -362,10 +388,79 @@ def _market_group(selection: str) -> tuple[str, int] | None:
     return None
 
 
+def validate_dashboard_data(fixtures: list[dict]) -> dict[str, int]:
+    """Fail de build bij intern tegenstrijdige kansen of ongeldige odds.
+
+    Dit bewijst niet dat een modelvoorspelling uitkomt; het voorkomt wel dat
+    afronding, mapping of een loaderfout onmogelijke cijfers publiceert.
+    """
+    checked_probabilities = checked_odds = checked_market_groups = 0
+    errors: list[str] = []
+    for fixture in fixtures:
+        fixture_id = str(fixture.get("id") or "onbekend")
+        probs = {key: float(value) for key, value in (fixture.get("probs") or {}).items()}
+        for key, probability in probs.items():
+            checked_probabilities += 1
+            if not math.isfinite(probability) or not 0.0 <= probability <= 1.0:
+                errors.append(f"{fixture_id} {key}: kans {probability} buiten 0..1")
+
+        for keys in (("home", "draw", "away"), ("fh_home", "fh_draw", "fh_away")):
+            if all(key in probs for key in keys) and abs(sum(probs[key] for key in keys) - 1.0) > 0.0003:
+                errors.append(f"{fixture_id} {'/'.join(keys)} telt niet op tot 1")
+        for yes, no in (("btts_yes", "btts_no"),):
+            if yes in probs and no in probs and abs(probs[yes] + probs[no] - 1.0) > 0.0002:
+                errors.append(f"{fixture_id} {yes}/{no} is niet complementair")
+        for key, probability in probs.items():
+            if "_over_" in key or key.startswith("over_"):
+                opposite = key.replace("over_", "under_", 1)
+                if opposite in probs and abs(probability + probs[opposite] - 1.0) > 0.0002:
+                    errors.append(f"{fixture_id} {key}/{opposite} is niet complementair")
+        for combined, left, right in (
+            ("home_or_draw", "home", "draw"),
+            ("away_or_draw", "away", "draw"),
+            ("home_or_away", "home", "away"),
+        ):
+            if all(key in probs for key in (combined, left, right)) and abs(probs[combined] - probs[left] - probs[right]) > 0.0003:
+                errors.append(f"{fixture_id} {combined} wijkt af van componenten")
+
+        grouped: dict[tuple[str, str], list[dict]] = {}
+        for odd in fixture.get("odds") or []:
+            checked_odds += 1
+            try:
+                price = float(odd["o"])
+                fair = None if odd.get("f") is None else float(odd["f"])
+            except (KeyError, TypeError, ValueError):
+                errors.append(f"{fixture_id}: onleesbare odd")
+                continue
+            if not math.isfinite(price) or price <= 1.0 or (fair is not None and (not math.isfinite(fair) or not 0.0 < fair < 1.0)):
+                errors.append(f"{fixture_id} {odd.get('s')}: ongeldige odd/fair probability")
+            if not odd.get("u"):
+                errors.append(f"{fixture_id} {odd.get('s')}: odd mist versheidstijdstip")
+            market = _market_group(str(odd.get("s") or ""))
+            if market:
+                grouped.setdefault((str(odd.get("b") or ""), market[0]), []).append(odd)
+        for (_, market_name), rows in grouped.items():
+            expected = _market_group(str(rows[0].get("s") or ""))[1]
+            fair_values = [row.get("f") for row in rows]
+            if len(rows) == expected and all(value is not None for value in fair_values):
+                checked_market_groups += 1
+                if abs(sum(float(value) for value in fair_values) - 1.0) > 0.0003:
+                    errors.append(f"{fixture_id} {market_name}: marge-vrije kansen tellen niet op tot 1")
+
+    if errors:
+        preview = "\n  - ".join(errors[:20])
+        raise ValueError(f"Dashboarddata faalt integriteitscontrole:\n  - {preview}")
+    return {
+        "probabilities": checked_probabilities,
+        "odds": checked_odds,
+        "market_groups": checked_market_groups,
+    }
+
+
 def _fixture_odds(conn: sqlite3.Connection, fixture_id: int) -> tuple[list[dict], list[dict]]:
     """Actuele odds met de-vig marktwaarschijnlijkheid plus open/laatste koers."""
     rows = list(conn.execute(
-        """SELECT bookmaker_id,bookmaker_name,selection_key,odd,source_updated
+        """SELECT bookmaker_id,bookmaker_name,selection_key,odd,source_updated,fetched_at
            FROM fixture_odds WHERE fixture_id=? AND selection_key IS NOT NULL
            ORDER BY bookmaker_name,selection_key""",
         (fixture_id,),
@@ -392,7 +487,9 @@ def _fixture_odds(conn: sqlite3.Connection, fixture_id: int) -> tuple[list[dict]
         "o": round(float(row["odd"]), 3),
         "f": round(fair[(row["bookmaker_id"], row["selection_key"])], 4)
              if (row["bookmaker_id"], row["selection_key"]) in fair else None,
-        "u": row["source_updated"] or "",
+        # Sommige bookmakers leveren geen eigen update-timestamp. Gebruik dan
+        # de ophaaltijd, zodat zo'n quote niet onbeperkt als actueel geldt.
+        "u": row["source_updated"] or row["fetched_at"] or "",
     } for row in rows]
 
     history_rows = list(conn.execute(
@@ -407,8 +504,6 @@ def _fixture_odds(conn: sqlite3.Connection, fixture_id: int) -> tuple[list[dict]
     movement = [{
         "b": values[-1]["bookmaker_name"], "s": selection,
         "a": round(float(values[0]["odd"]), 3),
-        "c": round(float(values[-1]["odd"]), 3),
-        "at": values[0]["source_updated"], "ct": values[-1]["source_updated"],
         "n": len(values),
     } for (_, selection), values in history.items()]
     return current, movement
@@ -443,7 +538,13 @@ def _fixture_availability(conn: sqlite3.Connection, fixture_id: int) -> dict:
     return result
 
 
-def recent_settlements(conn: sqlite3.Connection, lookback_days: int = 10) -> list[dict]:
+def recent_settlements(conn: sqlite3.Connection, lookback_days: int = 400) -> list[dict]:
+    """Compacte uitslagenfeed voor client-side afwikkeling van open bets.
+
+    Tien dagen was te kort: wie de PWA een paar weken niet opende kon een
+    eerdere bet daarna nooit meer automatisch laten afwikkelen. Ruim een
+    seizoen houdt de statische feed klein, maar voorkomt die stille blokkade.
+    """
     cutoff = (date.today() - timedelta(days=lookback_days)).isoformat()
     rows = conn.execute(
         """SELECT f.id,f.match_date,f.kickoff,f.home_goals,f.away_goals,
@@ -497,10 +598,12 @@ def analyse_fixture(
     """Alle pre-match informatie voor één fixture, zonder tipgewichten."""
     cutoff = as_of or target
     ratings, source, league_avg, _ = snapshot
-    missing = [
-        t for t in (fixture["home"], fixture["away"]) if t not in ratings.attack
-    ]
-    fixture_ratings = initialise_promoted(ratings, missing) if missing else ratings
+    # Laat de empirische promovendusprior na het eerste duel niet abrupt
+    # verdwijnen: initialise_promoted poolt ook reeds gefitte teams zolang zij
+    # minder dan tien effectieve topcompetitiewedstrijden hebben.
+    fixture_ratings = initialise_promoted(
+        ratings, (fixture["home"], fixture["away"])
+    )
     pred = predict_fixture(
         fixture_ratings,
         fixture["home"],
@@ -549,6 +652,10 @@ def analyse_fixture(
         "prediction": pred,
         "signals": collect_signals(ctx),
         "quality": quality,
+        "effective_matches": {
+            "home": fixture_ratings.effective_matches.get(fixture["home"], 0.0),
+            "away": fixture_ratings.effective_matches.get(fixture["away"], 0.0),
+        },
         "source": source,
         "matchday": matchday,
         "form": {
@@ -646,6 +753,10 @@ def build_day(
             "p_over25": round(pred["probs"]["over_2.5"], 3),
             "p_btts": round(pred["probs"]["btts_yes"], 3),
             "quality": round(quality, 2), "xg_source": source,
+            "effective_matches": {
+                key: round(float(value), 2)
+                for key, value in analysis["effective_matches"].items()
+            },
             "form": analysis["form"],
             "score": f"{hg}-{ag}" if played else None,
             "players": players,
@@ -694,8 +805,9 @@ def _matchday(
                FROM fixtures f
                JOIN teams t ON t.league_code = f.league_code
                  AND t.name = ?
-               WHERE f.league_code = ? AND f.season = ? AND f.match_date < ?
-                 AND (f.home_team_id = t.id OR f.away_team_id = t.id)""",
+           WHERE f.league_code = ? AND f.season = ? AND f.match_date < ?
+             AND f.home_goals IS NOT NULL AND f.away_goals IS NOT NULL
+             AND (f.home_team_id = t.id OR f.away_team_id = t.id)""",
             (team, league, season, target),
         ).fetchone()
         counts.append(int(row["n"]))
@@ -753,6 +865,13 @@ def main_with_args(
         print("\nGeen wedstrijden om te tonen. Probeer een andere datum met --date.")
         return 1
 
+    integrity = validate_dashboard_data(fixtures)
+    print(
+        "  Integriteitscheck: "
+        f"{integrity['probabilities']} kansen, {integrity['odds']} odds en "
+        f"{integrity['market_groups']} complete marktgroepen akkoord"
+    )
+
     tips = [t for f in fixtures for t in f["tips"]]
     settled = [t for t in tips if t["hit"] is not None]
     hits = sum(1 for t in settled if t["hit"])
@@ -764,6 +883,12 @@ def main_with_args(
               f"({hits / len(settled):.0%})")
 
     display_matchday = matchday_label(targets)
+    history = model_history_summary(conn, cutoff)
+    history_count = f"{int(history['matches']):,}".replace(",", ".")
+    history_start = str(history["first_date"] or "")[:4]
+    history_label = f"{history_count} modelduels"
+    if history_start:
+        history_label += f" sinds {history_start}"
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/[]",
         json.dumps(fixtures, ensure_ascii=False, separators=(",", ":")),
@@ -771,7 +896,8 @@ def main_with_args(
         "/*__SETTLEMENTS__*/[]",
         json.dumps(recent_settlements(conn), ensure_ascii=False, separators=(",", ":")),
     ).replace("__MATCHDAY__", display_matchday).replace(
-        "__GENERATED__", datetime.now().strftime("%d-%m-%Y %H:%M"))
+        "__GENERATED__", datetime.now().strftime("%d-%m-%Y %H:%M")).replace(
+        "__HISTORY__", history_label)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

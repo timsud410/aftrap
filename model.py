@@ -114,6 +114,11 @@ RHO_BOUNDS = (-0.20, 0.05)
 #: 44,7% (Bundesliga) over 44.000 wedstrijden; 0.44 is een goede default.
 DEFAULT_FIRST_HALF_RATIO = 0.44
 
+#: Tot dit aantal tijdgewogen wedstrijden blijft de empirische
+#: promovendusprior gedeeltelijk actief. Bij tien effectieve wedstrijden
+#: krijgt de eigen fit het volledige gewicht.
+PROMOTED_PRIOR_FULL_WEIGHT_MATCHES = 10.0
+
 
 def time_weights(
     match_dates: Sequence[date], reference: date, xi: float = DEFAULT_XI_PER_DAY
@@ -323,13 +328,18 @@ def initialise_promoted(
     promoted_teams: Iterable[str],
     attack_factor: float = 0.79,
     defence_factor: float = 0.845,
+    full_weight_matches: float = PROMOTED_PRIOR_FULL_WEIGHT_MATCHES,
 ) -> TeamRatings:
-    """Geef promovendi een startrating in plaats van ze te weigeren.
+    """Pool onervaren teams geleidelijk met de promovendusprior.
 
     Een promovendus heeft geen historie op dit niveau. De defaults zijn
     empirisch, uit 327 promovendus-teamseizoenen (2006-2026, zes
     competities): promovendi scoren gemiddeld 21% minder dan het
     competitiegemiddelde en incasseren 18% meer.
+
+    Dit zijn vaste aggregaten en geen genest, uitsluitend op de trainingsset
+    geschatte hyperparameters. Herschat ze train-only per competitie voordat
+    je de prior zelf volledig out-of-sample of winstgevend noemt.
 
     Die tweede helft is belangrijk. Alleen de aanval verzwakken -- de
     intuitieve fout -- halveert het gemodelleerde kwaliteitsverschil, en
@@ -339,18 +349,57 @@ def initialise_promoted(
     (0.70 recent) en de Eredivisie (0.76), het mildst in Ligue 1 en Serie A
     (0.82).
 
-    Door de tijdsweging neemt de eigen data dit binnen ongeveer acht
-    wedstrijden over.
+    De menging gebeurt in log-ratingruimte. Voor ``n`` effectieve wedstrijden
+    is het gewicht van de eigen fit ``w = clip(n / full_weight_matches, 0, 1)``
+    en wordt de gebruikte rating ``w * fitted + (1 - w) * prior``. Daardoor
+    verdwijnt de prior niet abrupt zodra het eerste duel is gespeeld. Teams
+    zonder fit starten exact op de prior; vanaf tien effectieve wedstrijden
+    blijft de fit ongewijzigd.
+
+    Alle ratingdicts worden gekopieerd. Ook bij een al bekende promovendus
+    muteert deze functie het oorspronkelijke ``TeamRatings``-object dus niet.
     """
+    if (
+        not np.isfinite(attack_factor)
+        or attack_factor <= 0.0
+        or not np.isfinite(defence_factor)
+        or defence_factor <= 0.0
+    ):
+        raise ValueError("Promovendusfactoren moeten eindig en positief zijn.")
+    if not np.isfinite(full_weight_matches) or full_weight_matches <= 0.0:
+        raise ValueError("full_weight_matches moet eindig en positief zijn.")
+
     attack = dict(ratings.attack)
     defence = dict(ratings.defence)
     eff = dict(ratings.effective_matches)
-    for team in promoted_teams:
-        if team in attack:
+
+    attack_prior = float(np.log(attack_factor))
+    defence_prior = float(np.log(defence_factor))
+    # Dezelfde teamnaam tweemaal poolen zou de uitkomst onbedoeld nog verder
+    # naar de prior trekken. dict.fromkeys maakt de bewerking idempotent binnen
+    # deze aanroep en bewaart tegelijk een voorspelbare volgorde.
+    for team in dict.fromkeys(promoted_teams):
+        effective = float(eff.get(team, 0.0))
+        if not np.isfinite(effective) or effective < 0.0:
+            raise ValueError(
+                f"effective_matches voor {team!r} moet eindig en niet-negatief zijn."
+            )
+
+        if team not in attack or team not in defence:
+            attack[team] = attack_prior
+            defence[team] = defence_prior
+            eff[team] = effective
             continue
-        attack[team] = float(np.log(attack_factor))
-        defence[team] = float(np.log(defence_factor))
-        eff[team] = 0.0
+
+        if not np.isfinite(attack[team]) or not np.isfinite(defence[team]):
+            raise ValueError(f"Ratings voor {team!r} moeten eindig zijn.")
+
+        weight = min(effective / full_weight_matches, 1.0)
+        if weight < 1.0:
+            attack[team] = weight * attack[team] + (1.0 - weight) * attack_prior
+            defence[team] = weight * defence[team] + (1.0 - weight) * defence_prior
+        eff[team] = effective
+
     return TeamRatings(
         attack=attack,
         defence=defence,

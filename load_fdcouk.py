@@ -191,25 +191,45 @@ def parse_rows(text: str) -> list[dict]:
 def store_season(
     conn: sqlite3.Connection, league_code: str, season: int, rows: list[dict]
 ) -> tuple[int, int]:
-    inserted = skipped = 0
+    """Sla een seizoenssnapshot idempotent op.
+
+    API-Football kan een komende wedstrijd al hebben aangemaakt voordat
+    football-data.co.uk de uitslag en statistieken publiceert. Een bestaand
+    fixture-record moet daarom worden aangevuld, niet vroeg worden overgeslagen.
+    """
+    inserted = updated = 0
     for r in rows:
         home_id = store.team_id(conn, league_code, r["home"])
         away_id = store.team_id(conn, league_code, r["away"])
 
-        cur = conn.execute(
-            """INSERT OR IGNORE INTO fixtures
-               (league_code, season, match_date, kickoff, home_team_id, away_team_id,
-                home_goals, away_goals, home_goals_ht, away_goals_ht, referee, status)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,'finished')""",
-            (league_code, season, r["date"], r["kickoff"], home_id, away_id,
-             r["home_goals"], r["away_goals"], r["home_goals_ht"],
-             r["away_goals_ht"], r["referee"]),
-        )
-        if cur.rowcount == 0:
-            skipped += 1
-            continue
-        inserted += 1
-        fid = int(cur.lastrowid)
+        existing = conn.execute(
+            """SELECT id FROM fixtures
+               WHERE league_code=? AND season=? AND match_date=?
+                 AND home_team_id=? AND away_team_id=?""",
+            (league_code, season, r["date"], home_id, away_id),
+        ).fetchone()
+        if existing:
+            fid = int(existing["id"])
+            conn.execute(
+                """UPDATE fixtures SET kickoff=?, home_goals=?, away_goals=?,
+                      home_goals_ht=?, away_goals_ht=?, referee=?, status='finished'
+                   WHERE id=?""",
+                (r["kickoff"], r["home_goals"], r["away_goals"],
+                 r["home_goals_ht"], r["away_goals_ht"], r["referee"], fid),
+            )
+            updated += 1
+        else:
+            cur = conn.execute(
+                """INSERT INTO fixtures
+                   (league_code, season, match_date, kickoff, home_team_id, away_team_id,
+                    home_goals, away_goals, home_goals_ht, away_goals_ht, referee, status)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,'finished')""",
+                (league_code, season, r["date"], r["kickoff"], home_id, away_id,
+                 r["home_goals"], r["away_goals"], r["home_goals_ht"],
+                 r["away_goals_ht"], r["referee"]),
+            )
+            inserted += 1
+            fid = int(cur.lastrowid)
 
         for side, tid in (("home", home_id), ("away", away_id)):
             conn.execute(
@@ -230,7 +250,7 @@ def store_season(
                 (fid, r["odds_home"], r["odds_draw"], r["odds_away"],
                  r["odds_over25"], r["odds_under25"], r["bookmaker"]),
             )
-    return inserted, skipped
+    return inserted, updated
 
 
 def add_xg_proxy(conn: sqlite3.Connection, league_code: str, season: int) -> int:
@@ -438,12 +458,12 @@ def main_with_args(
                 continue
 
             rows = parse_rows(text)
-            ins, skip = store_season(conn, lg["code"], season, rows)
+            ins, refreshed = store_season(conn, lg["code"], season, rows)
             add_xg_proxy(conn, lg["code"], season)
             conn.commit()
             total_in += ins
-            total_skip += skip
-            line += "#" if ins else ("=" if skip else "·")
+            total_skip += refreshed
+            line += "#" if ins else ("=" if refreshed else "·")
         print(line)
 
     conn.execute(
@@ -461,8 +481,8 @@ def main_with_args(
     )
     conn.commit()
 
-    print(f"\n  # = nieuw ingeladen   = = al aanwezig   · = niet beschikbaar   ! = fout")
-    print(f"\n  {total_in} wedstrijden toegevoegd, {total_skip} al aanwezig.")
+    print(f"\n  # = nieuw ingeladen   = = bijgewerkt   · = niet beschikbaar   ! = fout")
+    print(f"\n  {total_in} wedstrijden toegevoegd, {total_skip} bijgewerkt.")
     coverage_report(conn)
     print(f"  Database: {Path(args.db).resolve()}")
     print(f"  Ruwe bestanden: {RAW.resolve()}\n")

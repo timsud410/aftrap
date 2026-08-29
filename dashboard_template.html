@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b1220">
+  <meta name="theme-color" content="#f6f8fc">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Aftrap">
   <meta name="description" content="Datagedreven voetbaltips met transparante modelkansen en onderbouwing.">
   <meta property="og:title" content="Aftrap — datagedreven voetbaltips">
@@ -307,6 +307,512 @@
       .odds-compare-row > div:nth-child(4) { display: none; }
       .odds-compare-row .odd-pill { grid-column: 1/-1; }
     }
+
+    /* Matchday Command Center — donkere, data-first app theme */
+    :root {
+      --navy: #060b12; --navy-2: #101d2c; --ink: #f4f8fc; --muted: #91a2b8;
+      --line: rgba(255,255,255,.085); --paper: #0d1723; --ground: #060b12;
+      --lime: #b7ff63; --lime-soft: rgba(183,255,99,.11); --blue: #58d5ff;
+      --radius: 18px; --radius-lg: 24px; --shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+    html,body { min-height: 100%; color-scheme: dark; background: #050910; }
+    body { color: var(--ink); background: radial-gradient(circle at 14% -8%,rgba(48,112,144,.19),transparent 34%),radial-gradient(circle at 91% 8%,rgba(121,194,56,.11),transparent 28%),#050910; }
+    body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .18; background-image: linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px); background-size: 36px 36px; mask-image: linear-gradient(to bottom,black,transparent 78%); }
+    ::selection { background: rgba(183,255,99,.25); color: white; }
+    .topbar { background: rgba(5,9,16,.88); border-bottom-color: rgba(255,255,255,.075); box-shadow: 0 8px 30px rgba(0,0,0,.18); }
+    .topbar-inner { max-width: 1360px; min-height: 72px; }
+    .brand { gap: 11px; }
+    .brand-mark { width: 42px; height: 42px; border-radius: 13px; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 9px 24px rgba(0,0,0,.35),0 0 22px rgba(183,255,99,.08); }
+    .brand-name { font-size: 17px; line-height: 1.05; letter-spacing: -.035em; }
+    .brand-subline { margin-top: 4px; color: #718299; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .brand-tagline { color: #6f8095; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+    .top-meta { color: #74859a; }
+    .live-dot { background: var(--lime); box-shadow: 0 0 0 4px rgba(183,255,99,.1),0 0 16px rgba(183,255,99,.5); }
+    .help-button,.account-button { min-height: 38px; border-color: rgba(255,255,255,.11); background: rgba(255,255,255,.035); color: #dce5ef; }
+    .help-button:hover,.account-button:hover { border-color: rgba(183,255,99,.48); background: rgba(183,255,99,.07); color: var(--lime); }
+    .shell { max-width: 1360px; overflow: clip; background: transparent; }
+    .dashboard-overview { gap: 22px; }
+    .dashboard-title-row { align-items: center; }
+    .dashboard-kicker { width: fit-content; margin-bottom: 9px; padding: 6px 9px; border: 1px solid rgba(183,255,99,.15); border-radius: 999px; background: rgba(183,255,99,.055); color: #a5dd68; font-size: 9px; letter-spacing: .12em; }
+    .dashboard-title-row h1 { font-size: clamp(32px,4vw,48px); font-weight: 700; letter-spacing: -.055em; }
+    .dashboard-title-row p { margin-top: 8px; color: #7f90a5; font-size: 13px; }
+    .dashboard-status { gap: 8px; }
+    .status-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 11px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(255,255,255,.035); color: #9cadbf; font-size: 9px; font-weight: 800; letter-spacing: .02em; }
+    .status-pill.live { color: #c9f99d; }
+    .status-pill.live i { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 12px rgba(183,255,99,.85); }
+    .status-pill.verified { color: #9fdff3; }
+    .dashboard-stats { gap: 12px; }
+    .dashboard-stat { min-height: 238px; overflow: hidden; padding: 20px; border-color: rgba(255,255,255,.09); border-radius: 24px; background: linear-gradient(145deg,rgba(18,31,45,.96),rgba(9,16,25,.98)); box-shadow: inset 0 1px 0 rgba(255,255,255,.045),0 18px 50px rgba(0,0,0,.18); isolation: isolate; }
+    .dashboard-stat::before { content: ""; position: absolute; z-index: -1; width: 170px; height: 170px; right: -80px; top: -95px; border-radius: 50%; background: rgba(88,213,255,.09); filter: blur(2px); }
+    .dashboard-stat.value::before { background: rgba(183,255,99,.08); }
+    .dashboard-stat.primary { border-color: rgba(88,213,255,.26); background: linear-gradient(145deg,rgba(18,39,52,.98),rgba(8,18,27,.98)); }
+    button.dashboard-stat:hover { border-color: rgba(88,213,255,.4); box-shadow: inset 0 1px 0 rgba(255,255,255,.07),0 22px 60px rgba(0,0,0,.27); transform: translateY(-3px); }
+    button.dashboard-stat.value:hover { border-color: rgba(183,255,99,.38); }
+    .dashboard-stat-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .dashboard-stat-head > span { color: #8fa2b8; font-size: 10px; letter-spacing: .11em; }
+    .dashboard-stat-head > i { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.1); border-radius: 50%; background: rgba(255,255,255,.035); color: #8da1b7; font-size: 13px; font-style: normal; }
+    .dashboard-stat-number { display: flex; align-items: end; gap: 9px; margin-top: 15px; }
+    .dashboard-stat-number strong { margin: 0; color: var(--blue); font-size: 34px; font-weight: 500; line-height: .95; }
+    .dashboard-stat.value .dashboard-stat-number strong { color: var(--lime); }
+    .dashboard-stat-number small { margin: 0 0 2px; color: #697c92; font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .dashboard-stat-fixture { display: block; overflow: hidden; margin-top: 17px; color: #f4f8fc; font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .dashboard-stat-selection { display: block; overflow: hidden; margin-top: 5px; color: #95a5b8; font-size: 11px; font-weight: 650; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
+    .dashboard-stat-selection em { color: #c6d1dd; font-family: var(--num); font-style: normal; }
+    .dashboard-stat-compare { display: grid; gap: 6px; margin-top: 15px; }
+    .dashboard-stat-compare > div { display: grid; grid-template-columns: 34px minmax(0,1fr) 30px; align-items: center; gap: 7px; }
+    .dashboard-stat-compare span { color: #708299; font-size: 8px; font-weight: 800; letter-spacing: .02em; text-transform: none; }
+    .dashboard-stat-compare i { height: 4px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.07); }
+    .dashboard-stat-compare i b { display: block; width: var(--model); height: 100%; border-radius: inherit; background: var(--blue); box-shadow: 0 0 10px rgba(88,213,255,.45); }
+    .dashboard-stat-compare > div:nth-child(2) i b { width: var(--market); background: #5c6d82; box-shadow: none; }
+    .dashboard-stat-compare strong { margin: 0; color: #b9c6d4; font-size: 9px; font-weight: 500; text-align: right; }
+    .dashboard-stat-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06); }
+    .dashboard-stat-meta span { color: #64768c; font-size: 8px; font-weight: 750; letter-spacing: 0; text-transform: none; }
+    .workspace { margin-top: 22px; }
+    .view-tabs { gap: 3px; padding: 4px; border-color: rgba(255,255,255,.075); border-radius: 16px; background: rgba(10,17,26,.8); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
+    .view-tab { min-height: 43px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 12px; color: #7f91a7; font-size: 11px; }
+    .view-tab svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .view-tab.active { background: rgba(255,255,255,.075); color: white; box-shadow: inset 0 1px 0 rgba(255,255,255,.055); }
+    .view-tab.active svg { color: var(--lime); }
+    .controls { margin-top: 14px; padding: 13px; border-color: rgba(255,255,255,.075); border-radius: 19px; background: rgba(10,17,26,.76); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); backdrop-filter: blur(16px); }
+    .date-chip,.league-select,.minimum-odd-filter { min-height: 43px; border-color: rgba(255,255,255,.085); background: rgba(255,255,255,.035); color: #c6d1dd; }
+    .date-chip { padding: 0 14px; color: #8294aa; font-size: 10px; }
+    .date-chip:hover { border-color: rgba(255,255,255,.16); color: white; }
+    .date-chip.active { border-color: rgba(183,255,99,.28); background: rgba(183,255,99,.09); color: #c4f690; box-shadow: inset 0 0 0 1px rgba(183,255,99,.035); }
+    .league-select { padding-left: 13px; color: #c7d1dd; font-size: 10px; outline: none; }
+    .league-select:focus,.minimum-odd-filter:focus-within { border-color: rgba(88,213,255,.42); box-shadow: 0 0 0 3px rgba(88,213,255,.08); }
+    .minimum-odd-filter span { color: #73859b; font-size: 8px; letter-spacing: .05em; text-transform: uppercase; }
+    .minimum-odd-filter input { color: var(--lime); font-size: 13px; }
+    .section-head { margin-top: 38px; }
+    .section-head h2,.bets-head h2 { color: #f4f8fc; font-size: 24px; font-weight: 700; letter-spacing: -.045em; }
+    .section-head p,.bets-head p { color: #74869c; font-size: 11px; }
+    .result-count { color: #71849a; font-size: 10px; letter-spacing: .03em; }
+    .chance-ranking { gap: 10px; }
+    .chance-row { position: relative; min-height: 106px; border-color: rgba(255,255,255,.075); border-radius: 20px; background: linear-gradient(115deg,rgba(17,28,41,.96),rgba(9,16,25,.96)); box-shadow: inset 0 1px 0 rgba(255,255,255,.028); transition: border-color .16s ease,transform .16s ease; }
+    .chance-row:hover { border-color: rgba(88,213,255,.22); transform: translateY(-1px); }
+    .chance-row:first-child { border-color: rgba(183,255,99,.3); background: linear-gradient(110deg,rgba(34,52,35,.8),rgba(12,22,29,.97) 42%); }
+    .chance-rank { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(255,255,255,.035); color: #7f91a7; font-size: 10px; }
+    .chance-fixture b,.chance-selection b { color: #edf3f9; font-size: 12px; }
+    .chance-fixture span,.chance-selection span { color: #6f8298; font-size: 9px; }
+    .chance-selection .chance-reason { color: #94a5b8; font-size: 10px; line-height: 1.5; }
+    .verified-signal { color: #9bd35f !important; }
+    .chance-probability span { color: #6b7f96; font-size: 8px; }
+    .chance-probability strong { color: var(--blue); font-size: 21px; }
+    .chance-row:first-child .chance-probability strong { color: var(--lime); }
+    .chance-row .odd-pill { min-height: 44px; border-color: rgba(183,255,99,.22); background: rgba(183,255,99,.075); color: #d9ffc0; }
+    .chance-row .odd-pill.value { border-color: rgba(183,255,99,.42); background: linear-gradient(135deg,rgba(183,255,99,.17),rgba(183,255,99,.07)); color: #e4ffcb; }
+    .chance-row .odd-pill small { color: #86a768; font-size: 8px; }
+    .chance-row .odd-pill i { color: var(--lime); }
+    .chance-open,.match-detail-button,.more-button { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.035); color: #9bdff5; }
+    .chance-open:hover,.match-detail-button:hover,.more-button:hover { border-color: rgba(88,213,255,.35); background: rgba(88,213,255,.08); color: #c7f2ff; }
+    .pick-grid { gap: 18px; }
+    .pick-card { border-color: rgba(255,255,255,.075); background: linear-gradient(145deg,rgba(16,27,40,.98),rgba(9,16,25,.98)); box-shadow: inset 0 1px 0 rgba(255,255,255,.035),0 16px 42px rgba(0,0,0,.15); }
+    .pick-card.featured { border-color: rgba(183,255,99,.22); background: linear-gradient(145deg,rgba(21,37,38,.98),rgba(9,16,25,.98) 68%); }
+    .pick-meta { color: #73869c; font-size: 10px; }
+    .pick-meta .league-pill,.outcome { background: rgba(255,255,255,.055); color: #9aaabd; }
+    .fixture-name { color: #f1f5f9; font-size: 18px; }
+    .tip-stack { border: 1px solid rgba(255,255,255,.06); background: rgba(3,8,14,.62); }
+    .tip-line { border-top-color: rgba(255,255,255,.065); }
+    .tip-kind { color: #61758d; font-size: 9px; }
+    .tip-line-name { color: #e7edf5; }
+    .tip-line-name small { color: #6c8098; font-size: 9px; }
+    .tip-line-value { color: var(--blue); }
+    .tip-line.primary .tip-line-value { color: var(--lime); }
+    .tip-line .odd-pill { border-color: rgba(255,255,255,.09); background: rgba(255,255,255,.035); color: #d8e1eb; }
+    .stack-note,.rationale,.confidence-copy { color: #74869b; }
+    .confidence-copy b { color: #dbe4ed; }
+    .confidence-bars i { background: rgba(255,255,255,.08); }
+    .confidence-bars i.on { background: var(--lime); box-shadow: 0 0 9px rgba(183,255,99,.35); }
+    details.model-details { border-top-color: rgba(255,255,255,.07); }
+    .prob-cell,.player-row,.player-empty { background: rgba(255,255,255,.035); }
+    .prob-cell span,.player-name span,.player-stat span { color: #6f8299; }
+    .prob-cell b,.player-name b,.player-stat b { color: #dfe7f0; }
+    .match-day { border-color: rgba(255,255,255,.075); background: rgba(10,17,26,.9); }
+    .match-day-head { background: rgba(255,255,255,.04); color: #a5b5c7; }
+    .match-row { border-top-color: rgba(255,255,255,.065); background: transparent; }
+    .match-row:hover { background: rgba(88,213,255,.035); }
+    .match-time,.match-league,.match-model { color: #71849a; }
+    .match-teams,.match-model b { color: #e5ecf4; }
+    .match-odds-line b { color: #abc0d3; }
+    .match-tip { background: rgba(183,255,99,.1); color: #b8ed7f; }
+    .match-tip.none { background: rgba(255,255,255,.04); color: #718299; }
+    .empty { border-color: rgba(255,255,255,.07); background: rgba(12,20,30,.72); color: #73869b; }
+    dialog { border: 1px solid rgba(255,255,255,.1); background: #0a111a; color: var(--ink); box-shadow: 0 34px 100px rgba(0,0,0,.62); }
+    dialog::backdrop { background: rgba(1,4,8,.76); backdrop-filter: blur(12px); }
+    .dialog-head { border-bottom: 1px solid rgba(255,255,255,.07); background: rgba(7,13,21,.97); }
+    .dialog-head small { color: var(--lime); }
+    .dialog-close { min-width: 40px; width: 40px; height: 40px; border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.035); }
+    .dialog-close:hover { border-color: rgba(88,213,255,.45); color: var(--blue); }
+    .dialog-body,.match-dialog-body { background: #070d15; }
+    .dialog-note,.how-step::before { background: rgba(255,255,255,.045); }
+    .how-step p,.dialog-note { color: #899bb0; }
+    .match-overview > div,.detail-section { border-color: rgba(255,255,255,.075); background: #0e1824; }
+    .match-overview span,.detail-section-head span,.market-group > b { color: #72859b; }
+    .match-overview strong,.detail-section-head h3 { color: #eef4fa; }
+    .team-form-grid > div,.detail-empty { background: rgba(255,255,255,.035); }
+    .team-form-grid span,.injury-row span { color: #8092a7; }
+    .market-chip { min-height: 58px; border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.028); color: #dfe8f1; }
+    .market-chip:hover { border-color: rgba(88,213,255,.3); background: rgba(88,213,255,.05); }
+    .market-chip.active { border-color: rgba(183,255,99,.42); background: rgba(183,255,99,.11); }
+    .market-chip small { color: #74869c; }
+    .odds-compare-row { border-color: rgba(255,255,255,.075); background: rgba(255,255,255,.025); }
+    .odds-compare-row.best { border-color: rgba(183,255,99,.25); background: rgba(183,255,99,.05); }
+    .odds-compare-row > div > span,.odds-compare-row > div > small { color: #71849a; }
+    .detail-section .odd-pill { border-color: rgba(183,255,99,.22); background: rgba(183,255,99,.08); color: #d7ffb2; }
+    .positive { color: var(--lime); }
+    .auth-gate { background: radial-gradient(circle at 25% 12%,rgba(42,113,148,.3),transparent 38%),radial-gradient(circle at 78% 80%,rgba(108,174,48,.16),transparent 34%),#050910; }
+    .auth-card { border-color: rgba(255,255,255,.1); background: rgba(11,20,31,.94); box-shadow: inset 0 1px 0 rgba(255,255,255,.05),0 34px 100px rgba(0,0,0,.5); backdrop-filter: blur(22px); }
+    .auth-brand span,.auth-card > p,.auth-status { color: #8193a8; }
+    .auth-input,.bet-input,.bet-select,.bet-textarea,.scenario-input { border-color: rgba(255,255,255,.09); background: rgba(255,255,255,.035); color: #edf3f9; }
+    .auth-submit,.primary-action { background: linear-gradient(135deg,#b7ff63,#8bd843); color: #0a1406; box-shadow: 0 10px 24px rgba(139,216,67,.16); }
+    .bets-summary { gap: 12px; }
+    .bet-kpi,.bet-panel { border-color: rgba(255,255,255,.075); background: linear-gradient(145deg,rgba(16,27,40,.96),rgba(9,16,25,.96)); }
+    .bet-kpi.primary { border-color: rgba(183,255,99,.24); background: rgba(183,255,99,.075); }
+    .bet-kpi span,.bet-kpi small,.bet-panel-head p,.bet-copy { color: #74879d; }
+    .bet-kpi strong,.bet-panel-head h3,.bet-title { color: #edf3f9; }
+    .bet-item,.scenario-card { border-color: rgba(255,255,255,.06); background: rgba(255,255,255,.025); }
+    .bet-filter,.secondary-action,.bet-action { border-color: rgba(255,255,255,.09); background: rgba(255,255,255,.03); color: #91a3b7; }
+    .bet-filter.active { border-color: rgba(88,213,255,.25); background: rgba(88,213,255,.09); color: #bdeeff; }
+    .scenario-metric { background: rgba(255,255,255,.04); }
+
+    @media (max-width: 860px) {
+      .dashboard-stat { min-height: 226px; }
+      .chance-row { min-height: 116px; }
+    }
+    @media (max-width: 620px) {
+      body::before { background-size: 28px 28px; }
+      .topbar { background: rgba(5,9,16,.96); }
+      .topbar-inner { min-height: 64px; padding: 0 13px; gap: 10px; }
+      .brand-mark { width: 39px; height: 39px; }
+      .brand-name { font-size: 16px; }
+      .brand-subline { font-size: 7px; }
+      .brand-tagline { display: none; }
+      .top-meta { gap: 7px; }
+      .help-button { min-height: 36px; padding: 0 10px; font-size: 9px; }
+      .account-button { min-height: 36px; padding: 0 10px; }
+      .shell { padding-top: calc(81px + env(safe-area-inset-top)); }
+      .dashboard-overview { gap: 17px; }
+      .dashboard-title-row { align-items: start; }
+      .dashboard-title-row h1 { font-size: 29px; }
+      .dashboard-title-row p { max-width: 320px; margin-top: 6px; font-size: 11px; line-height: 1.5; }
+      .dashboard-status { display: flex; flex-wrap: wrap; margin-top: 12px; }
+      .status-pill { min-height: 28px; padding: 0 9px; font-size: 8px; }
+      .dashboard-stats { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+      .dashboard-stat { min-height: 224px; padding: 15px; border-radius: 21px; }
+      .dashboard-stat-head > span { font-size: 8px; }
+      .dashboard-stat-head > i { width: 25px; height: 25px; }
+      .dashboard-stat-number { margin-top: 12px; }
+      .dashboard-stat-number strong { font-size: 28px; }
+      .dashboard-stat-number small { display: none; }
+      .dashboard-stat-fixture { margin-top: 14px; font-size: 11px; }
+      .dashboard-stat-selection { font-size: 9px; }
+      .dashboard-stat-compare { margin-top: 13px; }
+      .dashboard-stat-compare > div { grid-template-columns: 29px minmax(0,1fr) 27px; gap: 5px; }
+      .dashboard-stat-compare span,.dashboard-stat-compare strong { font-size: 7px; }
+      .dashboard-stat-meta { display: grid; gap: 3px; margin-top: 10px; }
+      .dashboard-stat-meta span { font-size: 7px; }
+      .workspace { margin-top: 18px; }
+      .view-tabs { right: 9px; bottom: calc(8px + env(safe-area-inset-bottom)); left: 9px; min-height: 62px; padding: 5px; border-color: rgba(255,255,255,.1); border-radius: 20px; background: rgba(8,14,22,.91); box-shadow: inset 0 1px 0 rgba(255,255,255,.055),0 16px 42px rgba(0,0,0,.48); }
+      .view-tab { min-height: 50px; flex-direction: column; justify-content: center; gap: 3px; padding: 4px; border-radius: 15px; font-size: 8px; }
+      .view-tab svg { width: 17px; height: 17px; }
+      .view-tab.active { background: rgba(183,255,99,.1); color: #d8fbb5; box-shadow: inset 0 0 0 1px rgba(183,255,99,.13); }
+      .view-tab .count { margin-left: 3px; }
+      .controls { padding: 10px; border-radius: 18px; }
+      .date-chip,.league-select,.minimum-odd-filter { min-height: 45px; }
+      .section-head { margin-top: 31px; }
+      .section-head h2,.bets-head h2 { font-size: 22px; line-height: 1.15; }
+      .section-head p,.bets-head p,.result-count { font-size: 10px; line-height: 1.5; }
+      .chance-row { min-height: 0; padding: 14px 12px; border-radius: 19px; }
+      .chance-fixture b,.chance-selection b { font-size: 12px; }
+      .chance-fixture span,.chance-selection span { font-size: 8px; }
+      .chance-selection .chance-reason { font-size: 10px; }
+      .chance-probability strong { font-size: 20px; }
+      .chance-row .odd-pill { min-height: 43px; }
+      .pick-card { padding: 16px; border-radius: 21px; }
+      .fixture-name { font-size: 16px; }
+      .tip-line { min-height: 70px; }
+      .tip-kind,.tip-line-name small,.stack-note { font-size: 8px; }
+      .tip-line-name { font-size: 11px; }
+      .match-dialog[open] { position: fixed; inset: env(safe-area-inset-top) 0 0; width: 100%; max-width: none; height: calc(100dvh - env(safe-area-inset-top)); max-height: none; margin: 0; border-width: 1px 0 0; border-radius: 24px 24px 0 0; }
+      .match-dialog .dialog-head { padding: 21px 18px 17px; }
+      .dialog-head h2 { font-size: 23px; }
+      .match-dialog-body { padding: 11px 10px calc(22px + env(safe-area-inset-bottom)); }
+      .detail-section { padding: 14px; border-radius: 17px; }
+      .market-chip { min-height: 64px; padding: 11px; }
+      .market-chip span { font-size: 10px; }
+      .market-chip strong { color: var(--blue); font-size: 13px; }
+      .odds-compare-row { padding: 11px; }
+      .auth-card { border-radius: 24px; }
+      .auth-input,.auth-submit { min-height: 48px; }
+      .bet-panel { border-radius: 21px; }
+    }
+    /* Betrouwbaarheid en leesbaarheid — kerninformatie nooit als microtekst */
+    .dashboard-stat.primary .dashboard-stat-number strong { color: var(--blue); }
+    .dashboard-stat.primary .dashboard-stat-compare strong { color: #b9c6d4; }
+    .dashboard-stat-compare > div { grid-template-columns: 62px minmax(0,1fr) 39px; }
+    .dashboard-stat-compare span,.dashboard-stat-compare strong { font-size: 10px; }
+    .dashboard-stat-meta span { font-size: 10px; }
+    .dashboard-stat-selection { font-size: 12px; }
+    .quality-badge { display: inline-flex !important; width: fit-content; margin-top: 7px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; padding: 3px 6px; color: #8ea0b4 !important; font-size: 9px !important; font-weight: 750; text-transform: none !important; }
+    .quality-badge.ready { border-color: rgba(88,213,255,.22); color: #9ddff4 !important; }
+    .quality-badge.caution { border-color: rgba(246,198,103,.28); color: #f0c979 !important; }
+    .model-warning,.model-quality { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; padding: 13px 15px; border: 1px solid rgba(246,198,103,.24); border-radius: 15px; background: rgba(246,198,103,.07); }
+    .model-quality { border-color: rgba(88,213,255,.18); background: rgba(88,213,255,.055); }
+    .model-warning b { color: #f2cd84; }
+    .model-quality b { color: #9fe5f8; }
+    .model-warning span,.model-quality span { color: #899bb0; font-size: 11px; line-height: 1.45; text-align: right; }
+    .status-pill.warning { color: #f0c979; }
+    .bet-model-context { border: 1px solid rgba(183,255,99,.15); background: rgba(183,255,99,.065); }
+    .bet-model-context span { color: #8497ab; font-size: 10px; }
+    .bet-model-context b { color: #d9ffc1; font-size: 12px; }
+    .bet-actions,.performance-row { border-top-color: rgba(255,255,255,.07); }
+    .bet-value-line span { background: rgba(255,255,255,.045); color: #8193a8; }
+    .bet-value-line .positive { background: rgba(183,255,99,.1); color: #bce98b; }
+    .how-step::before { color: #b7ff63; }
+    .help-button,.account-button,.dialog-close { min-height: 44px; }
+    .dialog-close { min-width: 44px; width: 44px; height: 44px; }
+    .chance-row .odd-pill small,.tip-line .odd-pill small { font-size: 10px; }
+    .chance-fixture span,.chance-selection span,.tip-line-name small,.pick-meta { font-size: 10px; }
+    .player-name span,.player-stat span,.performance-row span,.performance-row b { font-size: 10px; }
+    .scenario-field span,.scenario-metric span,.bet-number span,.bet-status { font-size: 9px; }
+    .scenario-metric b { font-size: 11px; }
+
+    @media (max-width: 620px) {
+      .help-button,.account-button { min-height: 44px; }
+      .dashboard-stat { min-height: 232px; }
+      .dashboard-stat-head > span { font-size: 9px; }
+      .dashboard-stat-fixture { font-size: 12px; }
+      .dashboard-stat-selection { font-size: 11px; }
+      .dashboard-stat-compare > div { grid-template-columns: 52px minmax(0,1fr) 34px; gap: 5px; }
+      .dashboard-stat-compare span,.dashboard-stat-compare strong { font-size: 9px; }
+      .dashboard-stat-meta span { font-size: 9px; }
+      .view-tab { font-size: 10px; }
+      .chance-fixture span,.chance-selection span { font-size: 10px; }
+      .tip-kind,.tip-line-name small,.stack-note { font-size: 10px; }
+      .model-warning,.model-quality { align-items: flex-start; flex-direction: column; }
+      .model-warning span,.model-quality span { font-size: 11px; text-align: left; }
+    }
+
+    /* Aftrap Studio — lichte finance-dashboard stijl */
+    :root {
+      --navy: #182134; --navy-2: #253148; --ink: #222735; --muted: #717b8e;
+      --line: #e4e9f1; --paper: #fff; --ground: #f5f7fb;
+      --lime: #22c67a; --lime-soft: #e9fbf2; --blue: #1769e0;
+      --radius: 18px; --radius-lg: 24px;
+      --shadow: 0 18px 44px rgba(35,50,78,.09),0 2px 8px rgba(35,50,78,.035);
+    }
+    html,body { min-height: 100%; color-scheme: light; background: var(--ground); }
+    html { overflow-x: hidden; }
+    body { overflow-x: hidden; color: var(--ink); background: radial-gradient(circle at 18% 3%,rgba(42,195,230,.10),transparent 28%),radial-gradient(circle at 86% 14%,rgba(119,89,255,.08),transparent 27%),var(--ground); }
+    body::before { display: none; }
+    ::selection { background: rgba(23,105,224,.18); color: var(--ink); }
+    :focus-visible { outline-color: rgba(23,105,224,.6); }
+
+    .topbar { background: rgba(255,255,255,.94); color: var(--ink); border-bottom-color: rgba(32,45,69,.08); box-shadow: 0 8px 26px rgba(39,55,84,.055); }
+    .topbar-inner { max-width: 1360px; min-height: 72px; }
+    .brand-mark { border-color: rgba(32,45,69,.09); box-shadow: 0 8px 20px rgba(31,48,78,.13); }
+    .brand-name { color: #1f2532; }
+    .brand-subline { color: #8a94a5; }
+    .brand-tagline { border-left-color: #e4e8ef; color: #8a94a5; }
+    .top-meta { color: #8490a2; }
+    .live-dot { background: #24c979; box-shadow: 0 0 0 4px rgba(36,201,121,.12),0 0 13px rgba(36,201,121,.3); }
+    .help-button,.account-button { border-color: #dfe5ee; background: #fff; color: #2f3848; box-shadow: 0 3px 10px rgba(35,50,78,.035); }
+    .help-button:hover,.account-button:hover { border-color: rgba(23,105,224,.35); background: #f2f7ff; color: var(--blue); }
+    .account-button span { color: #8b95a5; }
+
+    .shell { max-width: 1360px; overflow: clip; background: transparent; }
+    .dashboard-title-row h1 { color: #272b36; font-weight: 750; }
+    .dashboard-title-row p { color: #747e90; }
+    .dashboard-kicker { border: 0; background: transparent; color: #1769e0; padding: 0; font-weight: 800; }
+    .status-pill { border-color: #e0e6ee; background: rgba(255,255,255,.82); color: #788396; box-shadow: 0 3px 10px rgba(35,50,78,.03); }
+    .status-pill.live { color: #168452; }
+    .status-pill.live i { background: #22c67a; box-shadow: 0 0 0 3px rgba(34,198,122,.12); }
+    .status-pill.verified { color: #1769e0; }
+    .status-pill.history { color: #6656c9; }
+    .status-pill.warning { color: #a36c0e; }
+
+    .dashboard-stats { gap: 16px; }
+    .dashboard-stat { min-height: 226px; padding: 21px; border: 0; border-radius: 25px; color: #fff; box-shadow: 0 20px 44px rgba(30,60,105,.15),inset 0 1px 0 rgba(255,255,255,.22); }
+    .dashboard-stat::before { width: 240px; height: 240px; right: -108px; top: -126px; background: radial-gradient(circle,rgba(255,255,255,.34),rgba(255,255,255,0) 68%); filter: none; }
+    .dashboard-stat::after { content: ""; position: absolute; z-index: -1; width: 170px; height: 170px; left: -84px; bottom: -115px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; box-shadow: 0 0 0 24px rgba(255,255,255,.04),0 0 0 48px rgba(255,255,255,.025); }
+    .dashboard-stat:nth-child(1),.dashboard-stat.primary { background: linear-gradient(132deg,#0b9f98 0%,#087f9f 100%); }
+    .dashboard-stat:nth-child(2) { background: radial-gradient(circle at 76% 15%,rgba(255,63,145,.65),transparent 38%),linear-gradient(135deg,#6b22ee 0%,#a614cf 52%,#c90d60 100%); }
+    .dashboard-stat:nth-child(3) { background: radial-gradient(circle at 86% 14%,rgba(255,255,255,.12),transparent 35%),linear-gradient(138deg,#161a22 0%,#303746 100%); }
+    .dashboard-stat:nth-child(4) { background: radial-gradient(circle at 80% 16%,rgba(79,241,184,.3),transparent 36%),linear-gradient(135deg,#1669e7 0%,#156fcf 48%,#08745f 100%); }
+    button.dashboard-stat:hover,button.dashboard-stat.value:hover { border-color: transparent; box-shadow: 0 25px 55px rgba(30,60,105,.21),inset 0 1px 0 rgba(255,255,255,.25); transform: translateY(-3px); }
+    button.dashboard-stat:focus-visible { outline: 3px solid rgba(23,105,224,.28); outline-offset: 3px; }
+    .dashboard-stat-head > span { color: rgba(255,255,255,.92); }
+    .dashboard-stat-head > i { border-color: rgba(255,255,255,.34); background: rgba(255,255,255,.14); color: #fff; }
+    .dashboard-stat-number strong,.dashboard-stat.value .dashboard-stat-number strong,.dashboard-stat.primary .dashboard-stat-number strong { color: #fff; text-shadow: 0 2px 8px rgba(15,30,55,.12); }
+    .dashboard-stat-number small { color: rgba(255,255,255,.86); }
+    .dashboard-stat-fixture { color: #fff; }
+    .dashboard-stat-selection,.dashboard-stat-selection em { color: rgba(255,255,255,.93); }
+    .dashboard-stat.empty-stat > strong { color: #fff; }
+    .dashboard-stat.empty-stat > small { color: rgba(255,255,255,.86); }
+    .dashboard-stat-compare span,.dashboard-stat-compare strong,.dashboard-stat.primary .dashboard-stat-compare strong { color: rgba(255,255,255,.92); }
+    .dashboard-stat-compare i { background: rgba(255,255,255,.21); }
+    .dashboard-stat-compare i b { background: #fff; box-shadow: none; }
+    .dashboard-stat-compare > div:nth-child(2) i b { background: rgba(255,255,255,.56); }
+    .dashboard-stat-meta { border-top-color: rgba(255,255,255,.2); }
+    .dashboard-stat-meta span { color: rgba(255,255,255,.88); }
+
+    .view-tabs { border-color: #e3e8f0; background: rgba(255,255,255,.92); box-shadow: 0 8px 24px rgba(34,50,78,.07); }
+    .view-tab { color: #778194; }
+    .view-tab:hover { color: #2d3748; }
+    .view-tab.active { background: var(--blue); color: #fff; box-shadow: 0 8px 18px rgba(23,105,224,.22); }
+    .view-tab.active svg { color: #fff; }
+    .controls { border-color: #e3e8f0; background: rgba(255,255,255,.88); box-shadow: 0 12px 32px rgba(35,50,78,.055); }
+    .date-chip,.league-select,.minimum-odd-filter { border-color: #e1e6ee; background: #f9fafc; color: #3a4353; }
+    .date-chip { color: #768194; }
+    .date-chip:hover { border-color: #b9c9e2; background: #fff; color: #2d3748; }
+    .date-chip.active { border-color: rgba(23,105,224,.2); background: #eaf2ff; color: #1769e0; box-shadow: inset 0 0 0 1px rgba(23,105,224,.025); }
+    .league-select { color: #3b4556; }
+    .league-select:focus,.minimum-odd-filter:focus-within { border-color: rgba(23,105,224,.45); box-shadow: 0 0 0 3px rgba(23,105,224,.09); }
+    .minimum-odd-filter span { color: #7d8798; }
+    .minimum-odd-filter input { color: #1769e0; }
+
+    .section-head h2,.bets-head h2 { color: #272b36; }
+    .section-head p,.bets-head p,.result-count { color: #778194; }
+    .chance-row { border-color: #e4e9f1; background: #fff; box-shadow: 0 7px 22px rgba(37,53,82,.045); }
+    .chance-row:hover { border-color: rgba(23,105,224,.22); box-shadow: 0 12px 30px rgba(37,53,82,.075); }
+    .chance-row:first-child { border-color: rgba(20,184,166,.26); background: linear-gradient(105deg,#f0fffb 0%,#fff 43%); }
+    .chance-rank { border-color: #e3e8ef; background: #f6f8fb; color: #7c8798; }
+    .chance-fixture b,.chance-selection b { color: #273040; }
+    .chance-fixture span,.chance-selection span { color: #7d8798; }
+    .chance-selection .chance-reason { color: #626d7e; }
+    .verified-signal { color: #168452 !important; }
+    .quality-badge { border-color: #dfe5ed; background: #f7f9fc; color: #728094 !important; }
+    .quality-badge.ready { border-color: #bbd4fb; background: #edf5ff; color: #1769e0 !important; }
+    .quality-badge.caution { border-color: #f0d7a7; background: #fff8e9; color: #9c680c !important; }
+    .chance-probability span { color: #8993a3; }
+    .chance-probability strong,.chance-row:first-child .chance-probability strong { color: #1769e0; }
+    .chance-row .odd-pill,.chance-row .odd-pill.value { border-color: #b9ead1; background: #eafaf2; color: #126840; }
+    .chance-row .odd-pill small { color: #4f826d; }
+    .chance-row .odd-pill i { color: #128153; }
+    .chance-row .odd-pill.stale { border-color: #efd39b; background: #fff8e8; color: #8b621a; }
+    .chance-open,.match-detail-button,.more-button { border-color: #dbe5f5; background: #f4f8ff; color: #1769e0; }
+    .chance-open:hover,.match-detail-button:hover,.more-button:hover { border-color: rgba(23,105,224,.28); background: #eaf2ff; color: #0c56be; }
+
+    .pick-card,.pick-card.featured { border-color: #e3e8f0; background: #fff; box-shadow: var(--shadow); }
+    .pick-card.featured { border-color: rgba(23,105,224,.18); background: linear-gradient(145deg,#fff 52%,#f5f9ff 100%); }
+    .pick-meta { color: #7d8798; }
+    .pick-meta .league-pill,.outcome { background: #f0f3f7; color: #687487; }
+    .outcome.hit { background: #e8faf1; color: #168452; }
+    .featured-label { color: #1769e0; }
+    .fixture-name { color: #283141; }
+    .tip-stack { border: 1px solid #e5eaf1; background: #f8fafc; color: var(--ink); }
+    .tip-line { border-top-color: #e6ebf2; }
+    .tip-line.primary { background: #eef6ff; }
+    .tip-kind { color: #8a94a5; }
+    .tip-line.primary .tip-kind { color: #1769e0; }
+    .tip-line-name { color: #2d3645; }
+    .tip-line-name small { color: #8690a0; }
+    .tip-line-value,.tip-line.primary .tip-line-value { color: #1769e0; }
+    .tip-line .odd-pill,.detail-section .odd-pill { border-color: #bfe9d4; background: #eafaf2; color: #156a44; }
+    .tip-line .odd-pill small { color: #568370; }
+    .odd-pill i { color: #148453; }
+    .stack-note,.rationale,.confidence-copy { color: #737e90; }
+    .confidence-copy b { color: #313b4b; }
+    .confidence-bars i { background: #e3e8ef; }
+    .confidence-bars i.on { background: #22c67a; box-shadow: none; }
+    details.model-details { border-top-color: #e6eaf0; }
+    details.model-details summary { color: #1769e0; }
+    .prob-cell,.player-row,.player-empty { background: #f5f7fa; }
+    .prob-cell span,.player-name span,.player-stat span { color: #808b9b; }
+    .prob-cell b,.player-name b,.player-stat b { color: #303948; }
+
+    .match-day { border-color: #e2e7ef; background: #fff; box-shadow: 0 10px 30px rgba(35,50,78,.05); }
+    .match-day-head { background: #f4f6fa; color: #697588; }
+    .match-row { border-top-color: #e8ecf2; background: #fff; }
+    .match-row:hover { background: #f7faff; }
+    .match-time,.match-league,.match-model { color: #7b8798; }
+    .match-teams,.match-model b { color: #293242; }
+    .match-odds-line b { color: #4f5b6c; }
+    .match-tip { background: #e9faf2; color: #168452; }
+    .match-tip.none { background: #f0f3f7; color: #7f8998; }
+    .empty { border-color: #e2e7ef; background: #fff; color: #778294; box-shadow: 0 8px 26px rgba(35,50,78,.045); }
+
+    dialog { border: 1px solid #e3e8f0; background: #fff; color: var(--ink); box-shadow: 0 34px 100px rgba(24,37,62,.25); }
+    dialog::backdrop { background: rgba(25,37,58,.46); backdrop-filter: blur(10px); }
+    .dialog-head,.bet-dialog-head { border-bottom: 1px solid #e4e9f1; background: #fff; color: var(--ink); }
+    .dialog-head small { color: #1769e0; }
+    .dialog-head h2,.bet-dialog-head h2 { color: #252c38; }
+    .match-dialog .dialog-head p,.bet-dialog-head p { color: #7d8798; }
+    .dialog-close { border-color: #dce4ee; background: #f4f7fb; color: #536074; }
+    .dialog-close:hover { border-color: #bdd1ef; background: #eaf2ff; color: #1769e0; }
+    .dialog-body,.match-dialog-body,.bet-dialog-body { background: #f5f7fb; }
+    .how-step::before { background: #eaf2ff; color: #1769e0; }
+    .how-step b { color: #2b3443; }
+    .how-step p,.dialog-note { color: #6e798b; }
+    .dialog-note { border: 1px solid #e3e8ef; background: #fff; }
+    .match-overview { grid-template-columns: repeat(4,minmax(0,1fr)); }
+    .match-overview > div,.detail-section { border-color: #e1e7ef; background: #fff; box-shadow: 0 7px 22px rgba(35,50,78,.035); }
+    .match-overview span,.detail-section-head span,.market-group > b { color: #7b8798; }
+    .match-overview strong,.detail-section-head h3 { color: #2a3342; }
+    .team-form-grid > div,.detail-empty { background: #f5f7fa; }
+    .team-form-grid span,.injury-row span { color: #778396; }
+    .market-chip { border-color: #e2e7ef; background: #f8fafc; color: #303949; }
+    .market-chip:hover { border-color: #bdd1ef; background: #f2f7ff; }
+    .market-chip.active { border-color: rgba(23,105,224,.34); background: #eaf2ff; }
+    .market-chip strong { color: #1769e0; }
+    .market-chip small { color: #7d8798; }
+    .odds-compare-row { border-color: #e2e7ef; background: #fbfcfd; }
+    .odds-compare-row.best { border-color: #bde7d2; background: #f0fcf6; }
+    .odds-compare-row > div > span,.odds-compare-row > div > small { color: #778396; }
+    .positive { color: #148453; }
+    .model-warning,.model-quality { border-color: #efd29a; background: #fff8e9; }
+    .model-quality { border-color: #bed5f6; background: #eef5ff; }
+    .model-warning b { color: #936210; }
+    .model-quality b { color: #1769e0; }
+    .model-warning span,.model-quality span { color: #6d788a; }
+
+    .auth-gate { background: radial-gradient(circle at 19% 16%,rgba(19,194,186,.23),transparent 34%),radial-gradient(circle at 81% 21%,rgba(116,41,246,.17),transparent 33%),radial-gradient(circle at 74% 86%,rgba(23,105,224,.13),transparent 36%),#f4f7fb; }
+    .auth-card { border-color: rgba(255,255,255,.84); background: rgba(255,255,255,.92); box-shadow: 0 34px 90px rgba(35,50,78,.15); backdrop-filter: blur(22px); }
+    .auth-brand b,.auth-card h1 { color: #252c38; }
+    .auth-brand span,.auth-card > p,.auth-status { color: #758093; }
+    .auth-label,.bet-label { color: #6f7b8e; }
+    .auth-input,.bet-input,.bet-select,.bet-textarea,.scenario-input { border-color: #dfe5ed; background: #fff; color: #2d3645; }
+    .auth-input:focus,.bet-input:focus,.bet-select:focus,.bet-textarea:focus,.scenario-input:focus { border-color: rgba(23,105,224,.5); box-shadow: 0 0 0 3px rgba(23,105,224,.1); }
+    .auth-submit,.primary-action { background: linear-gradient(135deg,#1769e0,#0d82e8); color: #fff; box-shadow: 0 11px 25px rgba(23,105,224,.22); }
+
+    .bet-kpi,.bet-panel { border-color: #e2e7ef; background: #fff; box-shadow: 0 10px 30px rgba(35,50,78,.045); }
+    .bet-kpi.primary { border-color: #bde8d2; background: linear-gradient(140deg,#eafbf3,#f8fffb); }
+    .bet-kpi span,.bet-kpi small,.bet-panel-head p,.bet-copy { color: #778396; }
+    .bet-kpi strong,.bet-panel-head h3,.bet-title { color: #2a3342; }
+    .bet-item,.scenario-card { border-color: #e6eaf0; background: #f8fafc; }
+    .bet-filter,.secondary-action,.bet-action { border-color: #dfe5ed; background: #fff; color: #667286; }
+    .bet-filter.active { border-color: #1769e0; background: #1769e0; color: #fff; }
+    .secondary-action:hover,.bet-action:hover { border-color: #bdd1ef; background: #edf4ff; color: #1769e0; }
+    .scenario-metric { background: #fff; }
+    .bet-actions,.performance-row { border-top-color: #e5eaf0; }
+    .bet-value-line span { background: #eef2f6; color: #687488; }
+    .bet-value-line .positive { background: #e6f9f0; color: #148453; }
+    .bet-model-context { border-color: #bde8d2; background: #eafbf3; }
+    .bet-model-context span { color: #5f7c6d; }
+    .bet-model-context b { color: #126840; }
+
+    @media (max-width: 860px) {
+      .dashboard-stat { min-height: 218px; }
+      .match-overview { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 620px) {
+      .topbar { background: rgba(255,255,255,.97); }
+      .shell { width: 100%; max-width: 100%; padding-right: 12px; padding-left: 12px; overflow: clip; }
+      .dashboard-title-row h1 { color: #252b37; }
+      .dashboard-status { gap: 6px; }
+      .dashboard-stat { min-width: 0; min-height: 220px; padding: 15px; border-radius: 22px; box-shadow: 0 14px 30px rgba(30,60,105,.13),inset 0 1px 0 rgba(255,255,255,.2); }
+      .dashboard-stat::before { width: 180px; height: 180px; }
+      .dashboard-stat::after { width: 120px; height: 120px; }
+      .view-tabs { right: 9px; bottom: calc(8px + env(safe-area-inset-bottom)); left: 9px; border-color: rgba(35,50,78,.08); background: rgba(255,255,255,.94); box-shadow: 0 16px 42px rgba(32,47,76,.2); }
+      .view-tab { color: #778295; }
+      .view-tab.active { background: #1769e0; color: #fff; box-shadow: 0 8px 18px rgba(23,105,224,.22); }
+      .controls { background: #fff; }
+      .chance-row,.pick-card,.match-day,.bet-panel { box-shadow: 0 7px 20px rgba(35,50,78,.045); }
+      .match-dialog[open] { background: #f5f7fb; }
+      .match-dialog .dialog-head { background: rgba(255,255,255,.97); }
+      .detail-section { box-shadow: none; }
+      .match-overview { grid-template-columns: 1fr; }
+      .auth-card { background: rgba(255,255,255,.95); }
+    }
   </style>
 </head>
 <body class="auth-pending">
@@ -323,51 +829,51 @@
       <div class="auth-status" id="auth-status" role="status" aria-live="polite"></div>
     </div>
   </section>
-  <header class="topbar">
+  <header class="topbar" inert aria-hidden="true">
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-mark" src="aftrap-icon-192.png" alt=""><div class="brand-name">Aftrap</div><div class="brand-tagline">Modelselecties voor voetbal</div></div>
+      <div class="brand"><img class="brand-mark" src="aftrap-icon-192.png" alt=""><div><div class="brand-name">Aftrap</div><div class="brand-subline">Match intelligence</div></div><div class="brand-tagline">Voetbal · data · voordeel</div></div>
       <div class="top-meta"><span class="live-dot"></span><span>Bijgewerkt __GENERATED__</span><button class="help-button" id="open-help">Hoe werkt dit?</button><button class="account-button hidden" id="account-button" type="button" title="Uitloggen"><b id="account-name">Account</b><span>Uitloggen</span></button></div>
     </div>
   </header>
-  <main class="shell">
+  <main class="shell" inert aria-hidden="true">
     <section class="dashboard-overview" aria-label="Actueel overzicht">
       <div class="dashboard-title-row">
         <div>
           <span class="dashboard-kicker">Programma __MATCHDAY__</span>
-          <h1>Overzicht</h1>
-          <p>Modelkansen, actuele odds en jullie resultaten.</p>
+          <h1>Matchday dashboard</h1>
+          <p>De sterkste modelkansen en prijswaarde van dit programma.</p>
         </div>
-        <div class="dashboard-status"><span class="live-dot"></span><span>Bijgewerkt __GENERATED__</span></div>
+        <div class="dashboard-status"><span class="status-pill live"><i></i>Odds live</span><span class="status-pill verified" id="model-health">Rekencheck wordt uitgevoerd</span><span class="status-pill history">__HISTORY__</span></div>
       </div>
       <div class="dashboard-stats" id="dashboard-stats"></div>
     </section>
     <section class="workspace" aria-label="Voetbaltips">
-      <nav class="view-tabs" aria-label="Weergave">
-        <button class="view-tab active" data-view="tips">Uitgelicht <span class="count" id="tip-count"></span></button>
-        <button class="view-tab" data-view="matches">Alle wedstrijden <span class="count" id="match-count"></span></button>
-        <button class="view-tab" data-view="bets">Onze bets</button>
+      <nav class="view-tabs" aria-label="Weergave" role="tablist">
+        <button class="view-tab active" id="tab-tips" data-view="tips" role="tab" aria-selected="true" aria-controls="tips-view"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 16l5-5 4 4 7-8M16 7h4v4"/></svg><span>Uitgelicht <span class="count" id="tip-count"></span></span></button>
+        <button class="view-tab" id="tab-matches" data-view="matches" role="tab" aria-selected="false" aria-controls="matches-view"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 011 1v14H4V6a1 1 0 011-1z"/></svg><span>Wedstrijden <span class="count" id="match-count"></span></span></button>
+        <button class="view-tab" id="tab-bets" data-view="bets" role="tab" aria-selected="false" aria-controls="bets-view"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg><span>Onze bets</span></button>
       </nav>
       <div class="controls">
         <div class="date-chips" id="date-chips" aria-label="Filter op datum"></div>
         <div class="select-filters">
-          <label class="minimum-odd-filter"><span>Minimum odd</span><input id="minimum-odd" inputmode="decimal" value="1,30" aria-label="Minimum odd"></label>
+          <label class="minimum-odd-filter" data-ranking-filter><span>Minimum odd</span><input id="minimum-odd" inputmode="decimal" value="1,30" aria-label="Minimum odd"></label>
           <select class="league-select" id="league-select" aria-label="Filter op competitie"></select>
-          <select class="league-select" id="market-select" aria-label="Filter op markt"><option value="all">Alle markten</option><option value="Fulltime">Fulltime</option><option value="Totaal goals">Totaal goals</option><option value="BTTS">BTTS</option><option value="Team goals">Team goals</option><option value="Eerste helft">Eerste helft</option></select>
+          <select class="league-select" id="market-select" data-ranking-filter aria-label="Filter op markt"><option value="all">Alle markten</option><option value="Fulltime">Fulltime</option><option value="Totaal goals">Totaal goals</option><option value="BTTS">BTTS</option><option value="Team goals">Team goals</option><option value="Eerste helft">Eerste helft</option></select>
           <select class="league-select bookmaker-select" id="bookmaker-select" aria-label="Kies bookmaker"></select>
-          <select class="league-select sort-select" id="sort-select" aria-label="Sorteer selecties"><option value="probability">Hoogste modelkans</option><option value="edge">Grootste modelvoordeel</option><option value="odds">Hoogste odd</option></select>
+          <select class="league-select sort-select" id="sort-select" data-ranking-filter aria-label="Sorteer selecties"><option value="probability">Hoogste modelkans</option><option value="edge">Hoogste verwachte waarde</option><option value="odds">Hoogste odd</option></select>
         </div>
       </div>
-      <section id="tips-view">
+      <section id="tips-view" role="tabpanel" aria-labelledby="tab-tips">
         <div class="section-head"><div><h2>Beste kansen boven je minimum odd</h2><p id="ranking-description">Alle actuele markten, gesorteerd op hoogste modelkans.</p></div><div class="result-count" id="tip-result-count"></div></div>
         <div class="chance-ranking" id="chance-ranking"></div><div class="more-wrap hidden" id="more-wrap"><button class="more-button" id="more-button">Toon alle selecties</button></div>
         <div class="section-head signal-section-head"><div><h2>Uitgelichte signaalwedstrijden</h2><p>Drie modeltips per wedstrijd: hoofdselectie, fulltime en BTTS.</p></div></div>
         <div class="pick-grid" id="pick-grid"></div>
       </section>
-      <section id="matches-view" class="hidden">
+      <section id="matches-view" class="hidden" role="tabpanel" aria-labelledby="tab-matches">
         <div class="section-head"><div><h2>Volledig programma</h2><p>Inclusief wedstrijden waarvoor het model bewust geen tip geeft.</p></div><div class="result-count" id="match-result-count"></div></div>
         <div class="matches" id="matches"></div>
       </section>
-      <section id="bets-view" class="hidden">
+      <section id="bets-view" class="hidden" role="tabpanel" aria-labelledby="tab-bets">
         <div class="bets-head"><div><h2>Onze bets</h2><p>Jullie beheren samen dezelfde inzetten, resultaten en bankroll.</p></div><button class="primary-action" id="new-bet" type="button">+ Nieuwe bet</button></div>
         <div class="bets-summary" id="bets-summary"></div>
         <div class="bets-layout">
@@ -400,24 +906,24 @@
       </section>
     </section>
   </main>
-  <dialog id="help-dialog">
-    <div class="dialog-head"><div><small>Aftrap in één minuut</small><h2>Zo lees je de selecties</h2></div><button class="dialog-close" id="close-help" aria-label="Sluiten">×</button></div>
+  <dialog id="help-dialog" aria-labelledby="help-dialog-title">
+    <div class="dialog-head"><div><small>Aftrap in één minuut</small><h2 id="help-dialog-title">Zo lees je de selecties</h2></div><button class="dialog-close" id="close-help" aria-label="Sluiten">×</button></div>
     <div class="dialog-body">
       <div class="how-list">
-        <div class="how-step"><b>Begin bij ‘Modelselecties’</b><p>Aftrap controleert het hele programma, maar laat standaard alleen wedstrijden met voldoende bewijs zien.</p></div>
-        <div class="how-step"><b>Lees de drie regels als één modelbeeld</b><p>De hoofdselectie is historisch getoetst. Fulltime en BTTS tonen daarnaast de hoogste berekende kans binnen die markt.</p></div>
+        <div class="how-step"><b>Begin bij de kansenlijst</b><p>Aftrap gebruikt __HISTORY__, maar laat in de toplijsten alleen wedstrijden met voldoende gewogen topcompetitiehistorie en actuele odds zien.</p></div>
+        <div class="how-step"><b>Lees de drie regels als één modelbeeld</b><p>De hoofdselectie komt uit een historisch getoetst signaal. Fulltime en BTTS zijn aanvullende modelmarkten; dat is geen bewijs van winstgevendheid.</p></div>
         <div class="how-step"><b>Open de cijfers als je alles wilt zien</b><p>Onder iedere wedstrijd staan alle 1X2-, Over/Under-, BTTS- en verwachte-goalscijfers, plus recente schotvorm van spelers als die beschikbaar is.</p></div>
-        <div class="how-step"><b>Lees value als verschil in procentpunten</b><p>+26,1 pp betekent bijvoorbeeld: het model schat de kans 26,1 procentpunt hoger in dan de markt na verwijdering van de bookmakermarge.</p></div>
+        <div class="how-step"><b>Lees value als verwachte waarde</b><p>EV = modelkans × aangeboden odd − 1. +8% EV betekent theoretisch € 0,08 verwachte opbrengst per ingezette euro; het blijft een modelschatting, geen garantie.</p></div>
         <div class="how-step"><b>Houd jullie keuzes samen bij</b><p>Onder ‘Onze bets’ beheren beide accounts dezelfde inzetten en resultaten. Met drie wat-als scenario’s vergelijk je vooraf bankroll, rendement en risico.</p></div>
       </div>
-      <p class="dialog-note"><b>Belangrijk:</b> Odds worden iedere drie uur ververst en kunnen tussentijds veranderen. Aftrap geeft geen inzetadvies; een hoge modelkans of gemeten value is geen garantie op winst.</p>
+      <p class="dialog-note"><b>Belangrijk:</b> De marktensommen worden automatisch gecontroleerd, maar niet iedere modelmarkt is al afzonderlijk historisch gekalibreerd. Odds worden iedere drie uur ververst. Aftrap geeft geen inzetadvies; een hoge modelkans of positieve EV is geen garantie op winst.</p>
     </div>
   </dialog>
-  <dialog class="match-dialog" id="match-dialog">
+  <dialog class="match-dialog" id="match-dialog" aria-labelledby="match-dialog-title">
     <div class="dialog-head"><div><small>Volledige wedstrijdanalyse</small><h2 id="match-dialog-title"></h2><p id="match-dialog-meta"></p></div><button class="dialog-close" id="close-match-dialog" type="button" aria-label="Sluiten">×</button></div>
     <div class="match-dialog-body" id="match-dialog-body"></div>
   </dialog>
-  <dialog class="bet-dialog" id="bet-dialog">
+  <dialog class="bet-dialog" id="bet-dialog" aria-labelledby="bet-dialog-title">
     <div class="bet-dialog-head"><div><h2 id="bet-dialog-title">Nieuwe bet</h2><p>Alle bedragen en quoteringen kun je later nog aanpassen.</p></div><button class="dialog-close" id="close-bet-dialog" type="button" aria-label="Sluiten">×</button></div>
     <form class="bet-dialog-body" id="bet-form">
       <input id="bet-id" type="hidden">
@@ -447,7 +953,7 @@
   <script type="application/json" id="legacy-app-code">
     const DATA = [];
     const DEMO = /*__DEMO__*/false;
-    const BAND = { high:{score:4,label:"sterk",bars:3}, medium:{score:3,label:"goed onderbouwd",bars:2}, low:{score:2,label:"voorzichtig",bars:1}, thin_data:{score:1,label:"beperkte historie",bars:1} };
+    const BAND = { high:{score:4,label:"sterk",bars:3}, medium:{score:3,label:"goed onderbouwd",bars:2}, low:{score:2,label:"voorzichtig",bars:1}, thin_data:{score:1,label:"beperkte topcompetitiehistorie",bars:1} };
     const state = { view:"tips", date:"all", league:"all", bookmaker:"best", expanded:false };
     const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
     const pct = value => `${Math.round(value*100)}%`;
@@ -484,8 +990,8 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
-  <script src="aftrap-app.js?v=20260829-8"></script>
+  <script src="aftrap-app.js?v=20260829-10"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
-  <script src="aftrap-account.js?v=20260829-4"></script>
+  <script src="aftrap-account.js?v=20260829-5"></script>
 </body>
 </html>

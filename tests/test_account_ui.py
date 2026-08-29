@@ -21,9 +21,9 @@ class AccountUiTests(unittest.TestCase):
             'id="bets-view"',
             'id="bet-form"',
             'id="scenario-bankroll"',
-            'src="aftrap-account.js?v=20260829-4"',
+            'src="aftrap-account.js?v=20260829-5"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-8"',
+            'src="aftrap-app.js?v=20260829-10"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -99,7 +99,9 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("Beste value", self.app_js)
         self.assertIn("Value #${index + 1}", self.app_js)
         self.assertIn('data-open-market="${esc(card.action.key)}"', self.app_js)
-        self.assertIn("Model ${pct(item.probability)} · markt", self.app_js)
+        self.assertIn("expectedValue: probability * Number(odd.o) - 1", self.app_js)
+        self.assertIn("const breakEven = 1 / Number(odd.o)", self.app_js)
+        self.assertIn("aria-label=\"Model ${pct1(card.model)}, break-even", self.app_js)
         self.assertIn("grid-template-columns: repeat(4,minmax(0,1fr))", self.template)
         self.assertNotIn('{ label: "Wedstrijden"', self.app_js)
         self.assertNotIn('{ label: "Beschikbare kansen"', self.app_js)
@@ -127,6 +129,27 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn('state.sort === "edge"', self.app_js)
         self.assertIn('state.sort === "odds"', self.app_js)
 
+    def test_ranking_excludes_thin_data_and_value_uses_executable_ev(self):
+        self.assertIn("RANKING_MIN_QUALITY = 0.45", self.app_js)
+        self.assertIn("DASHBOARD_MIN_QUALITY = 0.62", self.app_js)
+        self.assertIn("DASHBOARD_MIN_EFFECTIVE_MATCHES = 10", self.app_js)
+        self.assertIn("item.expectedValue >= DASHBOARD_MIN_EV", self.app_js)
+        self.assertIn('expectedValue > 0 ? "value"', self.app_js)
+        self.assertIn("model-warning", self.app_js)
+
+    def test_odds_expire_and_long_rankings_are_paginated(self):
+        self.assertIn("Number.POSITIVE_INFINITY", self.app_js)
+        self.assertIn("window.setInterval(renderAll, 5 * 60 * 1000)", self.app_js)
+        self.assertIn('document.addEventListener("visibilitychange"', self.app_js)
+        self.assertIn("state.visibleCount += PAGE_SIZE", self.app_js)
+        self.assertNotIn("state.expanded = true", self.app_js)
+
+    def test_tabs_dialogs_and_auth_gate_are_accessible(self):
+        self.assertIn('role="tablist"', self.template)
+        self.assertIn('role="tabpanel"', self.template)
+        self.assertIn('aria-labelledby="match-dialog-title"', self.template)
+        self.assertIn('<header class="topbar" inert aria-hidden="true">', self.template)
+
     def test_value_bet_and_auto_settlement_are_wired(self):
         self.assertIn("fairMarketProbability", self.app_js)
         self.assertIn("data-add-bet", self.app_js)
@@ -140,6 +163,38 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("const esc =", self.account_js)
         self.assertNotIn("DATA.map", self.account_js)
         self.assertNotIn("teamName(fixture", self.account_js)
+
+    def test_manual_fixture_bet_gets_auto_settlement_keys(self):
+        self.assertIn("fixtureFromDescription", self.account_js)
+        self.assertIn("resolveSelectionKey", self.account_js)
+        self.assertIn("syncManualBetContext", self.account_js)
+        self.assertIn('el("bet-fixture-id").value = String(fixture.id)', self.account_js)
+        self.assertIn('el("bet-selection-key").value = selectionKey', self.account_js)
+        self.assertIn('payload.fixture_external_id && !payload.selection_key', self.account_js)
+        self.assertIn("betContextIsUnchanged", self.account_js)
+        self.assertIn('el("bet-selection-key").value = ""', self.account_js)
+
+    def test_settled_bet_amounts_cannot_be_changed(self):
+        self.assertIn('const amountsLocked = Boolean(bet && bet.status !== "open")', self.account_js)
+        self.assertIn("input.disabled = amountsLocked", self.account_js)
+        self.assertIn('existingBet.status !== "open"', self.account_js)
+        self.assertIn("payload.stake = Number(existingBet.stake)", self.account_js)
+        self.assertIn("payload.odds = Number(existingBet.odds)", self.account_js)
+
+    def test_scenario_and_cashout_values_are_bounded(self):
+        self.assertIn("function scenarioNumber(input, minimum, maximum = Infinity)", self.account_js)
+        self.assertIn("Math.min(maximum, Math.max(minimum", self.account_js)
+        self.assertIn('scenarioNumber(card.querySelector("[data-scenario-stake]"), 0)', self.account_js)
+        self.assertIn('scenarioNumber(card.querySelector("[data-scenario-odds]"), 1.01)', self.account_js)
+        self.assertIn('scenarioNumber(card.querySelector("[data-scenario-chance]"), 0, 100)', self.account_js)
+        self.assertIn("payout === null || payout < 0", self.account_js)
+
+    def test_local_today_and_locked_auth_chrome_are_wired(self):
+        self.assertIn("now.getTimezoneOffset() * 60000", self.account_js)
+        self.assertIn("function setAppChromeAccessible(accessible)", self.account_js)
+        self.assertIn("node.inert = !accessible", self.account_js)
+        self.assertIn('node.setAttribute("aria-hidden", "true")', self.account_js)
+        self.assertIn('node.removeAttribute("aria-hidden")', self.account_js)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 import db as store
-from load_fdcouk import add_xg_proxy
+from load_fdcouk import add_xg_proxy, store_season
 
 
 class CausalProxyTests(unittest.TestCase):
@@ -55,6 +55,52 @@ class CausalProxyTests(unittest.TestCase):
         self.assertEqual(values(first), [1.5, 1.5])  # vaste prior 0.30
         self.assertEqual(values(second), [1.0, 1.0])  # alleen datum 1: 2/10
         self.assertEqual(values(third), [1.0, 1.0])   # kent datumgenoot niet
+
+    def test_finished_snapshot_enriches_existing_api_fixture(self):
+        home_id = store.team_id(self.conn, "EPL", "A")
+        away_id = store.team_id(self.conn, "EPL", "B")
+        cur = self.conn.execute(
+            """INSERT INTO fixtures
+               (league_code,season,match_date,kickoff,home_team_id,away_team_id,status)
+               VALUES ('EPL',2020,'2020-08-01','15:00',?,?,'NS')""",
+            (home_id, away_id),
+        )
+        fixture_id = int(cur.lastrowid)
+        self.conn.execute(
+            """INSERT INTO fixture_external_ids(source,external_id,fixture_id)
+               VALUES ('api_football','123',?)""",
+            (fixture_id,),
+        )
+        row = {
+            "date": "2020-08-01", "kickoff": "15:00", "home": "A", "away": "B",
+            "home_goals": 2, "away_goals": 1, "home_goals_ht": 1,
+            "away_goals_ht": 0, "referee": "Ref", "home_shots": 12,
+            "away_shots": 8, "home_sot": 5, "away_sot": 3,
+            "home_corners": 6, "away_corners": 2, "home_fouls": 9,
+            "away_fouls": 11, "home_yellow": 1, "away_yellow": 2,
+            "home_red": 0, "away_red": 0, "odds_home": 1.8,
+            "odds_draw": 3.5, "odds_away": 4.6, "odds_over25": 1.9,
+            "odds_under25": 1.95, "bookmaker": "market_avg_closing",
+        }
+
+        inserted, updated = store_season(self.conn, "EPL", 2020, [row])
+        add_xg_proxy(self.conn, "EPL", 2020)
+
+        self.assertEqual((inserted, updated), (0, 1))
+        fixture = self.conn.execute(
+            "SELECT home_goals,away_goals,status FROM fixtures WHERE id=?",
+            (fixture_id,),
+        ).fetchone()
+        self.assertEqual(tuple(fixture), (2, 1, "finished"))
+        self.assertEqual(
+            self.conn.execute("SELECT COUNT(*) n FROM fixture_stats WHERE fixture_id=?", (fixture_id,)).fetchone()["n"],
+            2,
+        )
+        self.assertIsNotNone(self.conn.execute("SELECT 1 FROM closing_odds WHERE fixture_id=?", (fixture_id,)).fetchone())
+        self.assertEqual(
+            self.conn.execute("SELECT COUNT(*) n FROM fixture_xg WHERE fixture_id=?", (fixture_id,)).fetchone()["n"],
+            2,
+        )
 
 
 if __name__ == "__main__":
