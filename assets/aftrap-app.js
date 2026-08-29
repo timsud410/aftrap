@@ -194,22 +194,24 @@
     const fixtures = filteredFixtures();
     const leagues = new Set(fixtures.map(fixture => fixture.league)).size;
     const topChance = [...ranking].sort((a, b) => b.probability - a.probability)[0];
-    const topEdge = [...ranking].sort((a, b) => b.edge - a.edge)[0];
-    const bookmakers = new Set(fixtures.flatMap(fixture => (fixture.odds || []).map(odd => odd.b)));
-    const freshOdds = fixtures.flatMap(fixture => fixture.odds || []).filter(odd => (state.bookmaker === "best" || odd.b === state.bookmaker) && (oddAge(odd) ?? 0) <= 6);
-    const latestTimestamp = freshOdds.reduce((latest, odd) => Math.max(latest, new Date(odd.u || 0).getTime() || 0), 0);
-    const minutesAgo = latestTimestamp ? Math.max(0, Math.round((Date.now() - latestTimestamp) / 60000)) : null;
-    const freshness = minutesAgo == null ? "Geen data" : minutesAgo < 60 ? `${minutesAgo} min` : `${Math.floor(minutesAgo / 60)}u ${minutesAgo % 60}m`;
-    const selectionName = item => item ? marketLabel(item.key, item.fixture) : "Geen selectie";
+    const valueTips = [...ranking].filter(item => item.edge > 0).sort((a, b) => b.edge - a.edge || b.probability - a.probability).filter((item, index, all) => all.findIndex(candidate => String(candidate.fixture.id) === String(item.fixture.id)) === index).slice(0, 3);
+    const tipCard = (label, item, value, comparison = "") => item ? {
+      label, value, fixture: `${teamName(item.fixture.home)} – ${teamName(item.fixture.away)}`,
+      selection: `${marketLabel(item.key, item.fixture)} · @${oddText(item.odd.o)}`,
+      comparison, action: item,
+    } : { label, value: "—", detail: `Geen actuele tip vanaf @${oddText(state.minimumOdd)}` };
+    const valueCard = (item, index) => tipCard(index === 0 ? "Beste value" : `Value #${index + 1}`, item, item ? pp(item.edge) : "—", item ? `Model ${pct(item.probability)} · markt ${pct(item.probability - item.edge)}` : "");
     const cards = [
       { label: "Wedstrijden", value: fixtures.length, detail: `${leagues} ${leagues === 1 ? "competitie" : "competities"}` },
       { label: "Beschikbare kansen", value: ranking.length, detail: `vanaf @${oddText(state.minimumOdd)}` },
-      { label: "Hoogste modelkans", value: topChance ? pct(topChance.probability) : "—", detail: selectionName(topChance), primary: true },
-      { label: "Grootste voordeel", value: topEdge ? pp(topEdge.edge) : "—", detail: topEdge ? `${selectionName(topEdge)} · @${oddText(topEdge.odd.o)}` : "Geen actuele odd" },
-      { label: "Bookmakers", value: bookmakers.size, detail: state.bookmaker === "best" ? "beste odd gebruikt" : state.bookmaker },
-      { label: "Odds bijgewerkt", value: freshness, detail: `${freshOdds.length} actuele quotes` },
+      { ...tipCard("Hoogste modelkans", topChance, topChance ? pct(topChance.probability) : "—"), primary: true },
+      ...[0, 1, 2].map(index => valueCard(valueTips[index], index)),
     ];
-    document.getElementById("dashboard-stats").innerHTML = cards.map(card => `<article class="dashboard-stat ${card.primary ? "primary" : ""}"><span>${esc(card.label)}</span><strong>${esc(card.value)}</strong><small>${esc(card.detail)}</small></article>`).join("");
+    document.getElementById("dashboard-stats").innerHTML = cards.map(card => {
+      const detail = card.action ? `<small><b>${esc(card.fixture)}</b><i>${esc(card.selection)} →</i>${card.comparison ? `<em>${esc(card.comparison)}</em>` : ""}</small>` : `<small>${esc(card.detail)}</small>`;
+      if (!card.action) return `<article class="dashboard-stat"><span>${esc(card.label)}</span><strong>${esc(card.value)}</strong>${detail}</article>`;
+      return `<button class="dashboard-stat ${card.primary ? "primary" : ""}" type="button" data-open-match="${esc(card.action.fixture.id)}" data-open-market="${esc(card.action.key)}" aria-label="Open ${esc(card.fixture)}, ${esc(card.selection)}"><span>${esc(card.label)}</span><strong>${esc(card.value)}</strong>${detail}</button>`;
+    }).join("");
   }
 
   function renderFilters() {

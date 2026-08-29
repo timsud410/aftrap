@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-4"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-6"',
+            'src="aftrap-app.js?v=20260829-7"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -96,7 +96,12 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("overflow-x: hidden", self.template)
         self.assertIn('id="dashboard-stats"', self.template)
         self.assertIn("renderDashboardStats", self.app_js)
-        self.assertIn("Odds bijgewerkt", self.app_js)
+        self.assertIn("Beste value", self.app_js)
+        self.assertIn("Value #${index + 1}", self.app_js)
+        self.assertIn('data-open-market="${esc(card.action.key)}"', self.app_js)
+        self.assertIn("Model ${pct(item.probability)} · markt", self.app_js)
+        self.assertNotIn('{ label: "Bookmakers"', self.app_js)
+        self.assertNotIn('{ label: "Odds bijgewerkt"', self.app_js)
         self.assertNotIn("Zie direct waar het model wél iets ziet.</h1>", self.template)
         self.assertNotIn('class="trust-strip"', self.template)
 

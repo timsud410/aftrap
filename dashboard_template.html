@@ -57,12 +57,18 @@
     .dashboard-title-row p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
     .dashboard-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
     .dashboard-stats { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 9px; }
-    .dashboard-stat { min-width: 0; min-height: 92px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+    .dashboard-stat { position: relative; min-width: 0; min-height: 118px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--ink); text-align: left; }
     .dashboard-stat.primary { border-color: #c8e8a1; background: var(--lime-soft); }
+    button.dashboard-stat { width: 100%; appearance: none; cursor: pointer; transition: border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
+    button.dashboard-stat:hover { border-color: #9dcc63; box-shadow: 0 8px 20px rgba(11,18,32,.08); transform: translateY(-1px); }
+    button.dashboard-stat:focus-visible { outline: 3px solid rgba(126,170,77,.28); outline-offset: 2px; }
     .dashboard-stat span { display: block; overflow: hidden; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
     .dashboard-stat strong { display: block; margin-top: 7px; overflow: hidden; font-family: var(--num); font-size: 20px; line-height: 1.05; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
     .dashboard-stat.primary strong { color: #47751b; }
-    .dashboard-stat small { display: block; margin-top: 7px; overflow: hidden; color: #7b8492; font-size: 8px; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .dashboard-stat small { display: block; margin-top: 7px; overflow: hidden; color: #7b8492; font-size: 8px; font-weight: 700; line-height: 1.35; }
+    .dashboard-stat small b { display: block; overflow: hidden; color: #465162; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+    .dashboard-stat small i { display: block; margin-top: 3px; overflow: hidden; color: #6a7584; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+    .dashboard-stat small em { display: block; margin-top: 3px; color: #557b2f; font-size: 7px; font-style: normal; }
     .workspace { margin-top: 18px; }
     .view-tabs { display: flex; gap: 6px; width: fit-content; padding: 5px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
     .view-tab { border: 0; border-radius: 9px; padding: 10px 16px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -259,9 +265,10 @@
       .dashboard-title-row p { max-width: 240px; font-size: 10px; }
       .dashboard-status { display: none; }
       .dashboard-stats { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
-      .dashboard-stat { min-height: 78px; padding: 11px; }
+      .dashboard-stat { min-height: 112px; padding: 11px; }
       .dashboard-stat strong { font-size: 18px; }
       .dashboard-stat small { margin-top: 5px; font-size: 7px; }
+      .dashboard-stat small b,.dashboard-stat small i { font-size: 7px; }
       .workspace { margin-top: 13px; }
       .view-tabs { position: fixed; z-index: 35; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom)); left: 10px; width: auto; padding: 5px; border-color: rgba(255,255,255,.14); background: rgba(11,18,32,.97); box-shadow: 0 12px 40px rgba(11,18,32,.3); backdrop-filter: blur(16px); }
       .view-tab { flex: 1; min-width: 0; padding: 10px 5px; color: #aeb8c9; font-size: 10px; white-space: nowrap; }
@@ -398,6 +405,7 @@
         <div class="how-step"><b>Begin bij ‘Modelselecties’</b><p>Aftrap controleert het hele programma, maar laat standaard alleen wedstrijden met voldoende bewijs zien.</p></div>
         <div class="how-step"><b>Lees de drie regels als één modelbeeld</b><p>De hoofdselectie is historisch getoetst. Fulltime en BTTS tonen daarnaast de hoogste berekende kans binnen die markt.</p></div>
         <div class="how-step"><b>Open de cijfers als je alles wilt zien</b><p>Onder iedere wedstrijd staan alle 1X2-, Over/Under-, BTTS- en verwachte-goalscijfers, plus recente schotvorm van spelers als die beschikbaar is.</p></div>
+        <div class="how-step"><b>Lees value als verschil in procentpunten</b><p>+26,1 pp betekent bijvoorbeeld: het model schat de kans 26,1 procentpunt hoger in dan de markt na verwijdering van de bookmakermarge.</p></div>
         <div class="how-step"><b>Houd jullie keuzes samen bij</b><p>Onder ‘Onze bets’ beheren beide accounts dezelfde inzetten en resultaten. Met drie wat-als scenario’s vergelijk je vooraf bankroll, rendement en risico.</p></div>
       </div>
       <p class="dialog-note"><b>Belangrijk:</b> Odds worden iedere drie uur ververst en kunnen tussentijds veranderen. Aftrap geeft geen inzetadvies; een hoge modelkans of gemeten value is geen garantie op winst.</p>
@@ -474,7 +482,7 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
-  <script src="aftrap-app.js?v=20260829-6"></script>
+  <script src="aftrap-app.js?v=20260829-7"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260829-4"></script>
 </body>
