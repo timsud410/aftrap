@@ -161,6 +161,33 @@ CREATE TABLE IF NOT EXISTS fixture_odds (
 CREATE INDEX IF NOT EXISTS idx_fixture_odds_fixture_selection
 ON fixture_odds (fixture_id, selection_key);
 
+-- Compacte, blijvende snapshots voor koersverloop en CLV. De actuele tabel
+-- hierboven mag worden vervangen; deze historie wordt juist alleen aangevuld.
+CREATE TABLE IF NOT EXISTS fixture_odds_history (
+    fixture_id      INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
+    bookmaker_id   INTEGER NOT NULL,
+    bookmaker_name TEXT NOT NULL,
+    selection_key  TEXT NOT NULL,
+    odd             REAL NOT NULL,
+    source_updated  TEXT NOT NULL,
+    fetched_at      TEXT NOT NULL,
+    PRIMARY KEY (fixture_id, bookmaker_id, selection_key, source_updated)
+);
+
+CREATE INDEX IF NOT EXISTS idx_odds_history_lookup
+ON fixture_odds_history (fixture_id, selection_key, bookmaker_id, source_updated);
+
+-- Beschikbaarheid is brondata die vlak voor de aftrap kan veranderen. JSON
+-- houdt het API-antwoord controleerbaar zonder de modeltabellen te vervuilen.
+CREATE TABLE IF NOT EXISTS fixture_availability (
+    fixture_id     INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
+    kind           TEXT NOT NULL CHECK (kind IN ('injuries', 'lineups')),
+    payload_json   TEXT NOT NULL,
+    source_updated TEXT,
+    fetched_at     TEXT NOT NULL,
+    PRIMARY KEY (fixture_id, kind)
+);
+
 CREATE TABLE IF NOT EXISTS load_runs (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     source      TEXT NOT NULL,

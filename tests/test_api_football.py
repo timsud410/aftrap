@@ -15,7 +15,7 @@ from load_api_football import (
     resolve_team,
     store_fixture,
 )
-from run_tips import pick_upcoming_dates, player_shot_form
+from run_tips import _fixture_odds, pick_upcoming_dates, player_shot_form
 
 
 FIXTURE = {
@@ -151,6 +151,10 @@ class ApiFootballStorageTests(unittest.TestCase):
         ).fetchone()
         self.assertEqual((row["bookmaker_name"], row["selection_key"], row["odd"]),
                          ("TestBet", "home", 1.95))
+        current, movement = _fixture_odds(self.conn, fixture_id)
+        self.assertAlmostEqual(sum(item["f"] for item in current), 1.0, places=3)
+        self.assertEqual(len(movement), 3)
+        self.assertTrue(all(item["n"] == 1 for item in movement))
 
         empty = {"response": [], "paging": {"current": 1, "total": 1}}
         with patch("load_api_football.api_get", return_value=empty):
@@ -162,6 +166,10 @@ class ApiFootballStorageTests(unittest.TestCase):
             "SELECT COUNT(*) n FROM fixture_odds WHERE fixture_id=?", (fixture_id,)
         ).fetchone()["n"]
         self.assertEqual(count, 0)
+        history_count = self.conn.execute(
+            "SELECT COUNT(*) n FROM fixture_odds_history WHERE fixture_id=?", (fixture_id,)
+        ).fetchone()["n"]
+        self.assertEqual(history_count, 3)
 
     def test_player_shots_are_stored_and_summarised_over_last_five_appearances(self):
         store_fixture(self.conn, "EPL", FIXTURE)

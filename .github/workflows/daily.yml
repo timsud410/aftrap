@@ -1,4 +1,4 @@
-# Draait elke ochtend vanzelf. Jij hoeft hier nooit iets aan te doen.
+# Draait iedere drie uur vanzelf. Jij hoeft hier nooit iets aan te doen.
 #
 # Wat er gebeurt:
 #   1. GitHub start een verse Linux-machine
@@ -8,12 +8,12 @@
 #
 # Je hoeft je Mac niet aan te hebben staan.
 
-name: Dagelijkse tips
+name: Aftrap verversen
 
 on:
   schedule:
-    # 05:00 UTC = 07:00 Nederlandse zomertijd, 06:00 in de winter.
-    - cron: "0 5 * * *"
+    # Elke drie uur: actuele odds, blessures, opstellingen en uitslagen.
+    - cron: "20 */3 * * *"
   workflow_dispatch:
   push:
     branches: [main]
@@ -50,10 +50,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            data/aftrap.sqlite
             data/raw
             data/api_football
-          key: fdcouk-${{ github.run_id }}
-          restore-keys: fdcouk-
+          key: aftrap-data-${{ github.run_id }}
+          restore-keys: aftrap-data-
 
       - name: Haal data op en genereer de tips
         run: python build_site.py

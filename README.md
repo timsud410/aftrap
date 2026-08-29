@@ -11,11 +11,13 @@ hun laatste maximaal vijf optredens waarin zij minimaal één schot op doel
 hadden. Deze spelersvorm is beschrijvend en wordt niet als backtest-signaal
 gepresenteerd.
 
-Dezelfde dagelijkse API-update haalt pre-match odds op voor iedere komende
+Dezelfde drie-uurlijkse API-update haalt pre-match odds op voor iedere komende
 wedstrijd. In het dashboard kan worden gekozen voor één bookmaker of voor
-`Beste beschikbare odd`. Per modelselectie staat naast de quotering ook de
-break-evenkans en het verschil met de modelkans. Ontbrekende markten blijven
-expliciet leeg; de app verzint of extrapoleert geen odds.
+`Beste beschikbare odd`. Per modelselectie staat naast de quotering de kans
+van die bookmaker nadat de marge over de volledige markt is verwijderd, plus
+het verschil met de modelkans. Openings- en actuele koersen blijven bewaard
+voor koersverloop en CLV. Ontbrekende markten blijven expliciet leeg; de app
+verzint of extrapoleert geen odds.
 
 ## Betrouwbaarheidsregels
 

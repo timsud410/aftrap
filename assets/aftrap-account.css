@@ -52,9 +52,17 @@
 .bet-status.lost { background: #ffe7e8; color: #a33d45; }
 .bet-status.open { background: #e8f1ff; color: #315f9a; }
 .bet-actions { grid-column: 1/-1; display: flex; flex-wrap: wrap; gap: 5px; padding-top: 9px; border-top: 1px solid #edf0f2; }
+.bet-value-line { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.bet-value-line span { border-radius: 999px; padding: 4px 7px; background: #eef1f4; color: #657080; font-family: var(--num); font-size: 7px; }
+.bet-value-line .positive { background: var(--lime-soft); color: #4b751d; }
 .bet-action { border: 1px solid #dfe3e8; border-radius: 8px; padding: 6px 8px; background: white; color: #637080; font-size: 8px; font-weight: 800; }
 .bet-action.good { border-color: #cae9a7; color: #4e771f; }
 .bet-action.bad { border-color: #f2c9cd; color: #9f3d47; }
+.performance-table { display: grid; gap: 5px; }
+.performance-row { display: grid; grid-template-columns: minmax(95px,1.4fr) repeat(3,minmax(45px,.5fr)); gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid #edf0f2; }
+.performance-row:first-child { border-top: 0; }
+.performance-row span { color: var(--muted); font-size: 8px; }
+.performance-row b { font-family: var(--num); font-size: 9px; text-align: right; }
 .bankroll-row { display: flex; gap: 8px; }
 .bankroll-row .scenario-input { flex: 1; }
 .secondary-action { border: 1px solid var(--navy); border-radius: 10px; padding: 10px 12px; background: white; color: var(--navy); font-size: 9px; font-weight: 800; }

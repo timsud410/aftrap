@@ -2,7 +2,7 @@
 """
 Eén knop: data ophalen, model draaien, pagina wegschrijven.
 
-Dit is wat GitHub elke ochtend uitvoert. Het roept dezelfde loader en
+Dit is wat GitHub iedere drie uur uitvoert. Het roept dezelfde loader en
 dezelfde runner aan die je ook lokaal zou gebruiken, zodat er geen tweede
 versie van de logica ontstaat die stilletjes uit de pas gaat lopen.
 
@@ -25,6 +25,7 @@ HERE = Path(__file__).resolve().parent
 SITE = HERE / "site"
 SOCIAL_CARD = HERE / "assets" / "aftrap-og.png"
 ACCOUNT_JS = HERE / "assets" / "aftrap-account.js"
+APP_JS = HERE / "assets" / "aftrap-app.js"
 ACCOUNT_CSS = HERE / "assets" / "aftrap-account.css"
 APP_ASSETS = (
     HERE / "assets" / "aftrap-icon-192.png",
@@ -71,6 +72,7 @@ def main() -> int:
         if SOCIAL_CARD.exists():
             shutil.copy2(SOCIAL_CARD, SITE / "aftrap-og.png")
         shutil.copy2(ACCOUNT_JS, SITE / ACCOUNT_JS.name)
+        shutil.copy2(APP_JS, SITE / APP_JS.name)
         shutil.copy2(ACCOUNT_CSS, SITE / ACCOUNT_CSS.name)
         for asset in APP_ASSETS:
             shutil.copy2(asset, SITE / asset.name)
@@ -85,6 +87,7 @@ def main() -> int:
             result = load_api_football.load_upcoming(conn, api_key)
             odds_result = load_api_football.load_pre_match_odds(conn, api_key)
             player_result = load_api_football.load_recent_player_stats(conn, api_key)
+            availability = load_api_football.load_fixture_availability(conn, api_key)
         finally:
             conn.close()
         print(
@@ -108,6 +111,12 @@ def main() -> int:
         )
         if odds_result["failures"]:
             print(f"  Let op: odds ophalen mislukte voor {odds_result['failures']} wedstrijden.")
+        print(
+            f"  Beschikbaarheid: {availability['injuries']} blessuremeldingen, "
+            f"{availability['lineups']} opstellingen ({availability['calls']} API-calls)."
+        )
+        if availability["failures"]:
+            print(f"  Let op: beschikbaarheid mislukte {availability['failures']} keer.")
         if player_result["team_failures"] or player_result["fixture_failures"]:
             print(
                 "  Let op: spelersdata ontbrak voor "

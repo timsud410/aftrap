@@ -14,6 +14,7 @@
   let bets = [];
   let betFilter = "all";
   let startingBankroll = 0;
+  const settlements = window.AFTRAP_SETTLEMENTS || [];
 
   const el = id => document.getElementById(id);
   const value = id => el(id).value.trim();
@@ -114,7 +115,7 @@
     calculateScenarios();
   }
 
-  async function loadBets() {
+  async function loadBets(allowAutoSettle = true) {
     el("bet-list").innerHTML = '<div class="loading-block">Bets laden…</div>';
     const { data, error } = await db.from("aftrap_bets").select("*").order("placed_at", { ascending: false }).order("created_at", { ascending: false });
     if (error) {
@@ -122,8 +123,10 @@
       return;
     }
     bets = data || [];
+    if (allowAutoSettle && await autoSettleBets()) return loadBets(false);
     renderBets();
     renderBetSummary();
+    renderPerformance();
     el("scenario-bankroll").value = currentBankroll().toFixed(2);
     calculateScenarios();
   }
@@ -154,6 +157,29 @@
       <div class="bet-kpi"><span>Hit rate</span><strong>${decisive.length ? `${Math.round(wins / decisive.length * 100)}%` : "—"}</strong><small>${wins} van ${decisive.length} beslist</small></div>`;
   }
 
+  function renderPerformance() {
+    const target = el("bet-performance");
+    const settled = bets.filter(bet => ["won", "lost", "void", "cashed_out"].includes(bet.status));
+    if (!settled.length) {
+      target.innerHTML = '<div class="detail-empty">Na de eerste afgewikkelde bets verschijnt hier jullie rendement per markt.</div>';
+      return;
+    }
+    const groups = {};
+    for (const bet of settled) {
+      const key = bet.market || "Overig";
+      const group = groups[key] ||= { n: 0, stake: 0, profit: 0, clv: [] };
+      group.n += 1;
+      group.stake += Number(bet.stake);
+      group.profit += Number(bet.payout || 0) - Number(bet.stake);
+      if (bet.clv_percent != null) group.clv.push(Number(bet.clv_percent));
+    }
+    target.innerHTML = `<div class="performance-table">${Object.entries(groups).sort((a, b) => b[1].n - a[1].n).map(([name, group]) => {
+      const roi = group.stake ? group.profit / group.stake * 100 : 0;
+      const avgClv = group.clv.length ? group.clv.reduce((sum, value) => sum + value, 0) / group.clv.length : null;
+      return `<div class="performance-row"><span>${esc(name)} · ${group.n}</span><b>${roi >= 0 ? "+" : ""}${number.format(roi)}% ROI</b><b>${group.profit >= 0 ? "+" : ""}${money.format(group.profit)}</b><b>${avgClv == null ? "CLV —" : `${avgClv >= 0 ? "+" : ""}${number.format(avgClv)}% CLV`}</b></div>`;
+    }).join("")}</div>`;
+  }
+
   function betProfit(bet) {
     return bet.status === "open" ? null : Number(bet.payout || 0) - Number(bet.stake);
   }
@@ -169,7 +195,7 @@
       const profit = betProfit(bet);
       const possible = Number(bet.stake) * Number(bet.odds);
       return `<article class="bet-item">
-        <div><div class="bet-title">${esc(bet.description)}</div><div class="bet-copy">${esc(bet.kind === "combi" ? "Combinatie" : (bet.market || "Single"))}${bet.selection ? ` · ${esc(bet.selection)}` : ""}<br>${esc(displayDate(bet.event_date || bet.placed_at))}${bet.bookmaker ? ` · ${esc(bet.bookmaker)}` : ""}</div><div class="bet-status ${esc(bet.status)}">${esc(statusLabels[bet.status] || bet.status)}</div></div>
+        <div><div class="bet-title">${esc(bet.description)}</div><div class="bet-copy">${esc(bet.kind === "combi" ? "Combinatie" : (bet.market || "Single"))}${bet.selection ? ` · ${esc(bet.selection)}` : ""}<br>${esc(displayDate(bet.event_date || bet.placed_at))}${bet.bookmaker ? ` · ${esc(bet.bookmaker)}` : ""}${bet.result_score ? ` · ${esc(bet.result_score)}` : ""}</div><div class="bet-value-line">${bet.edge_pp != null ? `<span class="${Number(bet.edge_pp) > 0 ? "positive" : ""}">${Number(bet.edge_pp) > 0 ? "+" : ""}${number.format(Number(bet.edge_pp))} pp bij plaatsing</span>` : ""}${bet.clv_percent != null ? `<span class="${Number(bet.clv_percent) > 0 ? "positive" : ""}">${Number(bet.clv_percent) > 0 ? "+" : ""}${number.format(Number(bet.clv_percent))}% CLV</span>` : ""}${bet.auto_settled ? `<span>automatisch afgewikkeld</span>` : ""}</div><div class="bet-status ${esc(bet.status)}">${esc(statusLabels[bet.status] || bet.status)}</div></div>
         <div class="bet-numbers"><div class="bet-number"><span>Inzet</span><b>${money.format(Number(bet.stake))}</b></div><div class="bet-number"><span>Quote</span><b>${number.format(Number(bet.odds))}</b></div><div class="bet-number"><span>${profit === null ? "Mogelijk" : "Resultaat"}</span><b>${profit === null ? money.format(possible) : `${profit >= 0 ? "+" : ""}${money.format(profit)}`}</b></div></div>
         <div class="bet-actions">${bet.status === "open" ? `<button class="bet-action good" data-settle="won" data-id="${bet.id}">Gewonnen</button><button class="bet-action bad" data-settle="lost" data-id="${bet.id}">Verloren</button><button class="bet-action" data-settle="void" data-id="${bet.id}">Void</button><button class="bet-action" data-settle="cashed_out" data-id="${bet.id}">Cash-out</button>` : ""}<button class="bet-action" data-edit-bet="${bet.id}">Bewerken</button><button class="bet-action bad" data-delete-bet="${bet.id}">Verwijderen</button></div>
       </article>`;
@@ -179,6 +205,11 @@
   function openBetDialog(bet = null) {
     el("bet-form").reset();
     el("bet-id").value = bet?.id || "";
+    el("bet-fixture-id").value = bet?.fixture_external_id || "";
+    el("bet-selection-key").value = bet?.selection_key || "";
+    el("bet-model-probability").value = bet?.model_probability || "";
+    el("bet-fair-market-probability").value = bet?.fair_market_probability || "";
+    el("bet-edge-pp").value = bet?.edge_pp || "";
     el("bet-dialog-title").textContent = bet ? "Bet bewerken" : "Nieuwe bet";
     el("bet-kind").value = bet?.kind || "single";
     el("bet-description").value = bet?.description || "";
@@ -191,9 +222,37 @@
     el("bet-event-date").value = bet?.event_date || "";
     el("bet-notes").value = bet?.notes || "";
     el("bet-legs").value = Array.isArray(bet?.legs) ? bet.legs.map(leg => leg.label || "").filter(Boolean).join("\n") : "";
+    renderBetContext();
     toggleLegs();
     setMessage("bet-form-message", "");
     el("bet-dialog").showModal();
+  }
+
+  function renderBetContext() {
+    const model = parseAmount(value("bet-model-probability"));
+    const fair = parseAmount(value("bet-fair-market-probability"));
+    const edge = Number(value("bet-edge-pp"));
+    const box = el("bet-model-context");
+    box.classList.toggle("hidden", !model);
+    box.innerHTML = model ? `<span>Modelkans<b>${number.format(model * 100)}%</b></span><span>Markt zonder marge<b>${fair ? `${number.format(fair * 100)}%` : "—"}</b></span><span>Waarde bij plaatsing<b>${Number.isFinite(edge) ? `${edge > 0 ? "+" : ""}${number.format(edge)} pp` : "—"}</b></span>` : "";
+  }
+
+  function openFromTip(tip) {
+    openBetDialog();
+    el("bet-kind").value = "single";
+    el("bet-fixture-id").value = tip.fixtureId;
+    el("bet-selection-key").value = tip.selectionKey;
+    el("bet-description").value = tip.description;
+    el("bet-market").value = tip.market;
+    el("bet-selection").value = tip.selection;
+    el("bet-bookmaker").value = tip.bookmaker;
+    el("bet-odds").value = tip.odds.toFixed(2);
+    el("bet-event-date").value = tip.eventDate;
+    el("bet-model-probability").value = tip.modelProbability;
+    el("bet-fair-market-probability").value = tip.fairMarketProbability ?? "";
+    el("bet-edge-pp").value = tip.edgePp ?? "";
+    renderBetContext();
+    el("bet-stake").focus();
   }
 
   function toggleLegs() {
@@ -217,6 +276,11 @@
       odds: parseAmount(value("bet-odds")),
       legs: value("bet-legs").split("\n").map(label => label.trim()).filter(Boolean).map(label => ({ label })),
       notes: value("bet-notes") || null,
+      fixture_external_id: value("bet-fixture-id") || null,
+      selection_key: value("bet-selection-key") || null,
+      model_probability: parseAmount(value("bet-model-probability")) || null,
+      fair_market_probability: parseAmount(value("bet-fair-market-probability")) || null,
+      edge_pp: value("bet-edge-pp") === "" ? null : Number(value("bet-edge-pp")),
       updated_at: new Date().toISOString(),
     };
     if (!payload.description || payload.stake <= 0 || payload.odds <= 1) {
@@ -247,8 +311,62 @@
       if (raw === null) return;
       payout = parseAmount(raw);
     }
-    const { error } = await db.from("aftrap_bets").update({ status, payout, updated_at: new Date().toISOString() }).eq("id", id);
+    const { error } = await db.from("aftrap_bets").update({ status, payout, auto_settled: false, settled_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
     if (!error) await loadBets();
+  }
+
+  function settleSelection(key, result) {
+    const { hg, ag, hh, ah } = result;
+    if (key.startsWith("fh_")) {
+      if (hh == null || ah == null) return null;
+      const rest = key.slice(3), total = hh + ah;
+      if (rest.startsWith("over_")) return total > Number(rest.slice(5));
+      if (rest.startsWith("under_")) return total < Number(rest.slice(6));
+      if (rest === "home") return hh > ah;
+      if (rest === "draw") return hh === ah;
+      if (rest === "away") return ah > hh;
+      return null;
+    }
+    const total = hg + ag;
+    if (key.startsWith("over_")) return total > Number(key.slice(5));
+    if (key.startsWith("under_")) return total < Number(key.slice(6));
+    if (key === "home") return hg > ag;
+    if (key === "draw") return hg === ag;
+    if (key === "away") return ag > hg;
+    if (key === "home_or_draw") return hg >= ag;
+    if (key === "away_or_draw") return ag >= hg;
+    if (key === "home_or_away") return hg !== ag;
+    if (key === "btts_yes") return hg > 0 && ag > 0;
+    if (key === "btts_no") return hg === 0 || ag === 0;
+    for (const [prefix, goals] of [["home_", hg], ["away_", ag]]) {
+      if (!key.startsWith(prefix)) continue;
+      const rest = key.slice(prefix.length);
+      if (rest.startsWith("over_")) return goals > Number(rest.slice(5));
+      if (rest.startsWith("under_")) return goals < Number(rest.slice(6));
+    }
+    return null;
+  }
+
+  async function autoSettleBets() {
+    const candidates = bets.filter(bet => bet.status === "open" && bet.kind === "single" && bet.fixture_external_id && bet.selection_key);
+    let changed = false;
+    for (const bet of candidates) {
+      const result = settlements.find(item => String(item.id) === String(bet.fixture_external_id));
+      if (!result) continue;
+      const won = settleSelection(bet.selection_key, result);
+      if (won == null) continue;
+      const close = (result.closing || []).find(item => item.s === bet.selection_key && item.b === bet.bookmaker) || (result.closing || []).find(item => item.s === bet.selection_key);
+      const closingOdd = close ? Number(close.o) : null;
+      const clv = closingOdd ? (Number(bet.odds) / closingOdd - 1) * 100 : null;
+      const payload = {
+        status: won ? "won" : "lost", payout: won ? Number(bet.stake) * Number(bet.odds) : 0,
+        closing_odd: closingOdd, clv_percent: clv, result_score: `${result.hg}-${result.ag}`,
+        auto_settled: true, settled_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      };
+      const { error } = await db.from("aftrap_bets").update(payload).eq("id", bet.id).eq("status", "open");
+      if (!error) changed = true;
+    }
+    return changed;
   }
 
   async function deleteBet(id) {
@@ -311,5 +429,5 @@
     if (session) await authorizeSession(); else showLogin();
   });
 
-  window.AftrapAccount = { refresh: loadBets };
+  window.AftrapAccount = { refresh: loadBets, openFromTip };
 })();

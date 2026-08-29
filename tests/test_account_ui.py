@@ -9,8 +9,9 @@ class AccountUiTests(unittest.TestCase):
     def setUp(self):
         self.template = (ROOT / "dashboard_template.html").read_text(encoding="utf-8")
         self.account_js = (ROOT / "assets" / "aftrap-account.js").read_text(encoding="utf-8")
+        self.app_js = (ROOT / "assets" / "aftrap-app.js").read_text(encoding="utf-8")
         self.account_css = (ROOT / "assets" / "aftrap-account.css").read_text(encoding="utf-8")
-        self.public_assets = self.template + self.account_js + self.account_css
+        self.public_assets = self.template + self.app_js + self.account_js + self.account_css
 
     def test_account_interface_is_wired(self):
         for marker in (
@@ -22,6 +23,8 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js"',
             'href="aftrap-account.css"',
+            'src="aftrap-app.js"',
+            'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
 
@@ -69,6 +72,14 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("Break-even", self.template)
         self.assertIn("fixture.odds", self.template)
         self.assertIn("odd.s===key", self.template)
+
+    def test_value_bet_and_auto_settlement_are_wired(self):
+        self.assertIn("fairMarketProbability", self.app_js)
+        self.assertIn("data-add-bet", self.app_js)
+        self.assertIn("openFromTip", self.account_js)
+        self.assertIn("autoSettleBets", self.account_js)
+        self.assertIn("clv_percent", self.account_js)
+        self.assertIn("AFTRAP_SETTLEMENTS", self.template)
 
 
 if __name__ == "__main__":

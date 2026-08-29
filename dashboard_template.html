@@ -104,6 +104,10 @@
     .tip-line-value { min-width: 48px; color: white; font-family: var(--num); font-size: 16px; font-weight: 500; text-align: right; }
     .tip-line.primary .tip-line-value { color: var(--lime); }
     .odd-pill { min-width: 68px; padding: 7px 8px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: rgba(255,255,255,.08); color: white; text-align: center; }
+    button.odd-pill:hover,button.odd-pill:focus-visible { border-color: var(--lime); outline: 0; }
+    .odd-pill.value { border-color: rgba(183,243,107,.46); background: rgba(183,243,107,.11); }
+    .odd-pill.stale { border-color: #a8844c; }
+    .odd-pill i { display: block; margin-top: 3px; color: var(--lime); font-size: 7px; font-style: normal; font-weight: 800; text-transform: uppercase; }
     .odd-pill b { display: block; font-family: var(--num); font-size: 12px; }
     .odd-pill small { display: block; max-width: 70px; margin-top: 2px; overflow: hidden; color: #9fabc0; font-size: 7px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
     .odd-pill.missing { color: #7d899b; font-size: 9px; }
@@ -115,6 +119,7 @@
     .confidence-bars i { width: 22px; height: 5px; border-radius: 5px; background: #e6e9ed; }
     .confidence-bars i.on { background: #7fba3d; }
     .rationale { margin: 15px 0 0; color: #505a69; font-size: 13px; line-height: 1.6; }
+    .match-detail-button { width: 100%; margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: white; color: var(--blue); font-size: 10px; font-weight: 800; }
     details.model-details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 13px; }
     details.model-details summary { list-style: none; color: var(--blue); font-size: 11px; font-weight: 800; cursor: pointer; }
     details.model-details summary::-webkit-details-marker { display: none; }
@@ -141,10 +146,13 @@
     .matches { display: flex; flex-direction: column; gap: 18px; }
     .match-day { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
     .match-day-head { padding: 14px 18px; background: #f0f3f4; font-size: 12px; font-weight: 800; }
-    .match-row { display: grid; grid-template-columns: 56px minmax(240px,1.3fr) minmax(280px,1fr) auto; align-items: center; gap: 18px; min-height: 66px; padding: 12px 18px; border-top: 1px solid var(--line); }
+    .match-row { width: 100%; display: grid; grid-template-columns: 56px minmax(240px,1.3fr) minmax(280px,1fr) auto; align-items: center; gap: 18px; min-height: 66px; padding: 12px 18px; border: 0; border-top: 1px solid var(--line); background: white; color: inherit; text-align: left; }
+    .match-row:hover { background: #fafcf9; }
     .match-row:first-of-type { border-top: 0; }
     .match-time { font-family: var(--num); color: var(--muted); font-size: 12px; }
     .match-teams { font-size: 13px; font-weight: 800; }
+    .match-teams { display: block; }
+    .match-teams i { color: #a8afba; padding: 0 5px; font-style: normal; font-weight: 500; }
     .match-teams span { color: #a8afba; padding: 0 5px; font-weight: 500; }
     .match-league { color: var(--muted); font-size: 10px; font-weight: 700; }
     .match-odds-line { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; color: #738094; font-family: var(--num); font-size: 9px; }
@@ -177,6 +185,49 @@
     .how-step b { display: block; font-size: 13px; }
     .how-step p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
     .dialog-note { margin: 22px 0 0; padding: 14px; border-radius: 12px; background: #f2f4f6; color: #596270; font-size: 11px; line-height: 1.6; }
+    .match-dialog { width: min(1120px,calc(100% - 28px)); max-height: calc(100vh - 28px); }
+    .match-dialog .dialog-head { position: sticky; top: 0; z-index: 2; }
+    .match-dialog .dialog-head p { margin: 6px 0 0; color: #aeb8c9; font-size: 11px; }
+    .match-dialog-body { display: grid; gap: 16px; padding: 22px; background: var(--ground); }
+    .match-overview { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
+    .match-overview > div { padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: white; }
+    .match-overview span { display: block; color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+    .match-overview strong { display: block; margin-top: 6px; font-family: var(--num); font-size: 14px; }
+    .detail-section { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: white; }
+    .detail-section-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+    .detail-section-head h3 { margin: 0; font-size: 15px; }
+    .detail-section-head span { color: var(--muted); font-size: 8px; font-weight: 700; }
+    .market-group + .market-group { margin-top: 14px; }
+    .team-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .team-form-grid > div { display: grid; grid-template-columns: 1.2fr repeat(3,1fr); gap: 8px; padding: 11px; border-radius: 10px; background: #f5f7f8; font-size: 9px; }
+    .team-form-grid span { color: var(--muted); text-align: right; }
+    .market-group > b { display: block; margin-bottom: 7px; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+    .market-chip-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
+    .market-chip { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fafbfb; color: inherit; text-align: left; }
+    .market-chip.active { border-color: #a8d875; background: var(--lime-soft); }
+    .market-chip span { overflow: hidden; font-size: 9px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .market-chip strong { font-family: var(--num); font-size: 11px; }
+    .market-chip small { grid-column: 1/-1; color: var(--muted); font-size: 7px; }
+    .odds-compare { display: grid; gap: 6px; }
+    .odds-compare-row { display: grid; grid-template-columns: minmax(130px,1.25fr) repeat(3,minmax(62px,.45fr)) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e9ecef; border-radius: 11px; }
+    .odds-compare-row.best { border-color: #cce9aa; background: #fbfff7; }
+    .odds-compare-row > div > b,.odds-compare-row > div > small { display: block; }
+    .odds-compare-row > div > span { display: block; color: var(--muted); font-size: 7px; text-transform: uppercase; }
+    .odds-compare-row > div > b { margin-top: 2px; font-family: var(--num); font-size: 10px; }
+    .odds-compare-row > div:first-child > b { font-family: var(--ui); }
+    .odds-compare-row > div > small { margin-top: 2px; color: var(--muted); font-size: 7px; }
+    .positive { color: #4e771f; }
+    .detail-empty { padding: 14px; border-radius: 10px; background: #f5f7f8; color: var(--muted); font-size: 9px; }
+    .availability-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .lineup-team + .lineup-team { margin-top: 13px; padding-top: 13px; border-top: 1px solid var(--line); }
+    .lineup-team b { font-size: 10px; }
+    .lineup-team p,.lineup-team small { display: block; margin: 6px 0 0; color: #586271; font-size: 8px; line-height: 1.6; }
+    .injury-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 9px; }
+    .injury-row:first-of-type { border-top: 0; }
+    .injury-row span { color: var(--muted); }
+    .bet-model-context { grid-column: 1/-1; display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; padding: 10px; border-radius: 10px; background: var(--lime-soft); }
+    .bet-model-context span { color: #59713e; font-size: 8px; }
+    .bet-model-context b { display: block; margin-top: 2px; color: #294b0e; font-family: var(--num); font-size: 11px; }
     @media (max-width: 860px) {
       .hero { grid-template-columns: 1fr; padding: 38px; }
       .hero-summary { grid-template-columns: repeat(3,1fr); }
@@ -184,6 +235,7 @@
       .pick-grid { grid-template-columns: 1fr; }
       .match-row { grid-template-columns: 50px 1fr auto; gap: 10px; }
       .match-model { display: none; }
+      .market-chip-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
     }
     @media (max-width: 620px) {
       .brand-tagline,.top-meta > span:not(.live-dot) { display: none; }
@@ -214,6 +266,13 @@
       .player-stat span { font-size: 6px; }
       .match-row { grid-template-columns: 44px minmax(0,1fr); }
       .match-tip { display: none; }
+      .match-dialog-body { padding: 12px; }
+      .match-overview,.availability-grid,.team-form-grid { grid-template-columns: 1fr; }
+      .team-form-grid > div { grid-template-columns: 1fr 1fr; }
+      .market-chip-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .odds-compare-row { grid-template-columns: minmax(100px,1fr) repeat(2,60px); }
+      .odds-compare-row > div:nth-child(4) { display: none; }
+      .odds-compare-row .odd-pill { grid-column: 1/-1; }
       .trust-strip { grid-template-columns: 1fr; }
       footer { flex-direction: column; }
     }
@@ -288,6 +347,10 @@
               </div>
               <p class="dialog-note">De verwachte waarde gebruikt de kans die je zelf invult. Dit is een rekentool, geen inzetadvies.</p>
             </div>
+            <div class="bet-panel">
+              <div class="bet-panel-head"><div><h3>Rendement per markt</h3><p>ROI en gemiddelde CLV van afgewikkelde bets</p></div></div>
+              <div id="bet-performance"><div class="loading-block">Resultaten laden…</div></div>
+            </div>
           </aside>
         </div>
       </section>
@@ -308,13 +371,22 @@
         <div class="how-step"><b>Open de cijfers als je alles wilt zien</b><p>Onder iedere wedstrijd staan alle 1X2-, Over/Under-, BTTS- en verwachte-goalscijfers, plus recente schotvorm van spelers als die beschikbaar is.</p></div>
         <div class="how-step"><b>Houd jullie keuzes samen bij</b><p>Onder ‘Onze bets’ beheren beide accounts dezelfde inzetten en resultaten. Met drie wat-als scenario’s vergelijk je vooraf bankroll, rendement en risico.</p></div>
       </div>
-      <p class="dialog-note"><b>Belangrijk:</b> Aftrap gebruikt geen live bookmakerquoteringen en geeft geen inzetadvies. Een hoge modelkans is geen garantie op winst.</p>
+      <p class="dialog-note"><b>Belangrijk:</b> Odds worden iedere drie uur ververst en kunnen tussentijds veranderen. Aftrap geeft geen inzetadvies; een hoge modelkans of gemeten value is geen garantie op winst.</p>
     </div>
+  </dialog>
+  <dialog class="match-dialog" id="match-dialog">
+    <div class="dialog-head"><div><small>Volledige wedstrijdanalyse</small><h2 id="match-dialog-title"></h2><p id="match-dialog-meta"></p></div><button class="dialog-close" id="close-match-dialog" type="button" aria-label="Sluiten">×</button></div>
+    <div class="match-dialog-body" id="match-dialog-body"></div>
   </dialog>
   <dialog class="bet-dialog" id="bet-dialog">
     <div class="bet-dialog-head"><div><h2 id="bet-dialog-title">Nieuwe bet</h2><p>Alle bedragen en quoteringen kun je later nog aanpassen.</p></div><button class="dialog-close" id="close-bet-dialog" type="button" aria-label="Sluiten">×</button></div>
     <form class="bet-dialog-body" id="bet-form">
       <input id="bet-id" type="hidden">
+      <input id="bet-fixture-id" type="hidden">
+      <input id="bet-selection-key" type="hidden">
+      <input id="bet-model-probability" type="hidden">
+      <input id="bet-fair-market-probability" type="hidden">
+      <input id="bet-edge-pp" type="hidden">
       <div class="bet-form-grid">
         <label class="bet-label">Type<select class="bet-select" id="bet-kind"><option value="single">Single</option><option value="combi">Combinatie</option></select></label>
         <label class="bet-label">Datum geplaatst<input class="bet-input" id="bet-placed-at" type="date" required></label>
@@ -325,6 +397,7 @@
         <label class="bet-label">Quotering<input class="bet-input" id="bet-odds" type="number" min="1.01" step="0.01" inputmode="decimal" required></label>
         <label class="bet-label">Wedstrijddatum<input class="bet-input" id="bet-event-date" type="date"></label>
         <label class="bet-label">Bookmaker<input class="bet-input" id="bet-bookmaker" placeholder="Optioneel"></label>
+        <div class="bet-model-context hidden" id="bet-model-context"></div>
         <label class="bet-label full hidden" id="bet-legs-wrap">Combinatiepoten, één per regel<textarea class="bet-textarea" id="bet-legs" placeholder="Ajax wint&#10;Over 2,5 goals"></textarea></label>
         <label class="bet-label full">Notities<textarea class="bet-textarea" id="bet-notes" placeholder="Waarom koos je deze bet?"></textarea></label>
       </div>
@@ -332,8 +405,8 @@
       <div class="bet-form-actions"><button class="secondary-action" id="cancel-bet" type="button">Annuleren</button><button class="primary-action" id="save-bet" type="submit">Bet opslaan</button></div>
     </form>
   </dialog>
-  <script>
-    const DATA = /*__DATA__*/[];
+  <script type="application/json" id="legacy-app-code">
+    const DATA = [];
     const DEMO = /*__DEMO__*/false;
     const BAND = { high:{score:4,label:"sterk",bars:3}, medium:{score:3,label:"goed onderbouwd",bars:2}, low:{score:2,label:"voorzichtig",bars:1}, thin_data:{score:1,label:"beperkte historie",bars:1} };
     const state = { view:"tips", date:"all", league:"all", bookmaker:"best", expanded:false };
@@ -371,6 +444,8 @@
     helpDialog.addEventListener("click",event=>{if(event.target===helpDialog)helpDialog.close();});
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
+  <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
+  <script src="aftrap-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js"></script>
 </body>

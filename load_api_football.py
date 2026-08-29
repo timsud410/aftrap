@@ -169,7 +169,7 @@ def _store_fixture_odds(
 ) -> tuple[int, set[str]]:
     """Vervang één complete odds-snapshot nadat alle pagina's zijn ontvangen."""
     fetched_at = datetime.now().astimezone().isoformat(timespec="seconds")
-    rows: list[tuple] = []
+    best_rows: dict[tuple[int, str], tuple] = {}
     bookmakers: set[str] = set()
     for response in responses:
         updated = response.get("update")
@@ -192,12 +192,19 @@ def _store_fixture_odds(
                         continue
                     if not outcome or odd <= 1:
                         continue
-                    rows.append((
+                    selection = canonical_odd_selection(bet_name, outcome)
+                    if selection is None:
+                        continue
+                    row = (
                         fixture_id, int(bookmaker_id), bookmaker_name, int(bet_id),
-                        bet_name, outcome,
-                        canonical_odd_selection(bet_name, outcome), odd,
+                        bet_name, outcome, selection, odd,
                         updated, fetched_at,
-                    ))
+                    )
+                    key = (int(bookmaker_id), selection)
+                    if key not in best_rows or odd > best_rows[key][7]:
+                        best_rows[key] = row
+
+    rows = list(best_rows.values())
 
     conn.execute("DELETE FROM fixture_odds WHERE fixture_id=?", (fixture_id,))
     conn.executemany(
@@ -207,7 +214,99 @@ def _store_fixture_odds(
            VALUES (?,?,?,?,?,?,?,?,?,?)""",
         rows,
     )
+    conn.executemany(
+        """INSERT INTO fixture_odds_history
+           (fixture_id, bookmaker_id, bookmaker_name, selection_key, odd,
+            source_updated, fetched_at)
+           VALUES (?,?,?,?,?,?,?)
+           ON CONFLICT(fixture_id, bookmaker_id, selection_key, source_updated)
+           DO UPDATE SET odd=excluded.odd, fetched_at=excluded.fetched_at""",
+        [
+            (row[0], row[1], row[2], row[6], row[7], row[8] or fetched_at, fetched_at)
+            for row in rows
+        ],
+    )
     return len(rows), bookmakers
+
+
+def _availability_fixtures(
+    conn: sqlite3.Connection,
+    start: date,
+    horizon_days: int,
+) -> list[sqlite3.Row]:
+    end = start + timedelta(days=horizon_days)
+    return conn.execute(
+        """SELECT f.id fixture_id, x.external_id, f.match_date, f.kickoff
+           FROM fixtures f
+           JOIN fixture_external_ids x ON x.fixture_id=f.id
+             AND x.source='api_football'
+           WHERE f.match_date BETWEEN ? AND ?
+             AND f.home_goals IS NULL AND f.away_goals IS NULL
+             AND f.status IN ('NS','TBD')
+           ORDER BY f.match_date,f.kickoff""",
+        (start.isoformat(), end.isoformat()),
+    ).fetchall()
+
+
+def _store_availability(
+    conn: sqlite3.Connection,
+    fixture_id: int,
+    kind: str,
+    payload: list[dict],
+) -> None:
+    fetched_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    conn.execute(
+        """INSERT INTO fixture_availability
+           (fixture_id,kind,payload_json,source_updated,fetched_at)
+           VALUES (?,?,?,?,?)
+           ON CONFLICT(fixture_id,kind) DO UPDATE SET
+             payload_json=excluded.payload_json,
+             source_updated=excluded.source_updated,
+             fetched_at=excluded.fetched_at""",
+        (fixture_id, kind, json.dumps(payload, ensure_ascii=False), fetched_at, fetched_at),
+    )
+
+
+def load_fixture_availability(
+    conn: sqlite3.Connection,
+    api_key: str,
+    start: date | None = None,
+) -> dict:
+    """Laad blessures voor drie dagen en opstellingen vlak voor de aftrap."""
+    start = start or date.today()
+    injury_fixtures = _availability_fixtures(conn, start, 3)
+    now = datetime.now()
+    lineup_fixtures = []
+    for fixture in _availability_fixtures(conn, start, 1):
+        if not fixture["kickoff"]:
+            continue
+        kickoff = datetime.fromisoformat(f'{fixture["match_date"]}T{fixture["kickoff"]}:00')
+        if timedelta(minutes=-30) <= kickoff - now <= timedelta(hours=3):
+            lineup_fixtures.append(fixture)
+
+    calls = failures = injury_rows = lineup_rows = 0
+    for fixture in injury_fixtures:
+        try:
+            payload = api_get("injuries", {"fixture": fixture["external_id"]}, api_key)
+            calls += 1
+            _store_availability(conn, int(fixture["fixture_id"]), "injuries", payload["response"])
+            injury_rows += len(payload["response"])
+        except RuntimeError:
+            failures += 1
+    for fixture in lineup_fixtures:
+        try:
+            payload = api_get("fixtures/lineups", {"fixture": fixture["external_id"]}, api_key)
+            calls += 1
+            if payload["response"]:
+                _store_availability(conn, int(fixture["fixture_id"]), "lineups", payload["response"])
+                lineup_rows += len(payload["response"])
+        except RuntimeError:
+            failures += 1
+    conn.commit()
+    return {
+        "calls": calls, "failures": failures,
+        "injuries": injury_rows, "lineups": lineup_rows,
+    }
 
 
 def load_pre_match_odds(
@@ -389,6 +488,7 @@ def load_upcoming(
     horizon_days: int = DEFAULT_HORIZON_DAYS,
 ) -> dict:
     start = start or date.today()
+    query_start = start - timedelta(days=2)
     end = start + timedelta(days=horizon_days)
     season = current_season_start(start)
     leagues = conn.execute(
@@ -404,7 +504,7 @@ def load_upcoming(
             {
                 "league": league["api_football_id"],
                 "season": season,
-                "from": start.isoformat(),
+                "from": query_start.isoformat(),
                 "to": end.isoformat(),
                 "timezone": "Europe/Amsterdam",
             },
@@ -422,7 +522,7 @@ def load_upcoming(
         "fetched": fetched,
         "created": created,
         "new_teams": sorted(set(new_teams)),
-        "from": start.isoformat(),
+        "from": query_start.isoformat(),
         "to": end.isoformat(),
     }
 

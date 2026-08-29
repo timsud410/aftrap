@@ -304,6 +304,8 @@ def settle(
         return hg >= ag
     if selection == "away_or_draw":
         return ag >= hg
+    if selection == "home_or_away":
+        return hg != ag
     for prefix, goals in (("home_", hg), ("away_", ag)):
         if selection.startswith(prefix):
             rest = selection[len(prefix):]
@@ -342,6 +344,131 @@ def label(selection: str, home: str, away: str) -> str:
 # ------------------------------------------------------------
 # hoofdlus
 # ------------------------------------------------------------
+
+
+def _market_group(selection: str) -> tuple[str, int] | None:
+    if selection in {"home", "draw", "away"}:
+        return "result", 3
+    if selection in {"fh_home", "fh_draw", "fh_away"}:
+        return "fh_result", 3
+    if selection in {"btts_yes", "btts_no"}:
+        return "btts", 2
+    for prefix in ("", "fh_", "home_", "away_"):
+        if not selection.startswith(prefix):
+            continue
+        rest = selection[len(prefix):]
+        if rest.startswith(("over_", "under_")):
+            return f"{prefix}total_{rest.split('_', 1)[1]}", 2
+    return None
+
+
+def _fixture_odds(conn: sqlite3.Connection, fixture_id: int) -> tuple[list[dict], list[dict]]:
+    """Actuele odds met de-vig marktwaarschijnlijkheid plus open/laatste koers."""
+    rows = list(conn.execute(
+        """SELECT bookmaker_id,bookmaker_name,selection_key,odd,source_updated
+           FROM fixture_odds WHERE fixture_id=? AND selection_key IS NOT NULL
+           ORDER BY bookmaker_name,selection_key""",
+        (fixture_id,),
+    ))
+    grouped: dict[tuple[int, str], list[sqlite3.Row]] = {}
+    for row in rows:
+        group = _market_group(row["selection_key"])
+        if group:
+            grouped.setdefault((row["bookmaker_id"], group[0]), []).append(row)
+
+    fair: dict[tuple[int, str], float] = {}
+    for (bookmaker_id, _), items in grouped.items():
+        expected = _market_group(items[0]["selection_key"])[1]
+        if len(items) != expected:
+            continue
+        overround = sum(1 / float(item["odd"]) for item in items)
+        if overround <= 0:
+            continue
+        for item in items:
+            fair[(bookmaker_id, item["selection_key"])] = (1 / float(item["odd"])) / overround
+
+    current = [{
+        "b": row["bookmaker_name"], "s": row["selection_key"],
+        "o": round(float(row["odd"]), 3),
+        "f": round(fair[(row["bookmaker_id"], row["selection_key"])], 4)
+             if (row["bookmaker_id"], row["selection_key"]) in fair else None,
+        "u": row["source_updated"] or "",
+    } for row in rows]
+
+    history_rows = list(conn.execute(
+        """SELECT bookmaker_id,bookmaker_name,selection_key,odd,source_updated
+           FROM fixture_odds_history WHERE fixture_id=?
+           ORDER BY bookmaker_id,selection_key,source_updated""",
+        (fixture_id,),
+    ))
+    history: dict[tuple[int, str], list[sqlite3.Row]] = {}
+    for row in history_rows:
+        history.setdefault((row["bookmaker_id"], row["selection_key"]), []).append(row)
+    movement = [{
+        "b": values[-1]["bookmaker_name"], "s": selection,
+        "a": round(float(values[0]["odd"]), 3),
+        "c": round(float(values[-1]["odd"]), 3),
+        "at": values[0]["source_updated"], "ct": values[-1]["source_updated"],
+        "n": len(values),
+    } for (_, selection), values in history.items()]
+    return current, movement
+
+
+def _fixture_availability(conn: sqlite3.Connection, fixture_id: int) -> dict:
+    result = {"injuries": [], "lineups": []}
+    for row in conn.execute(
+        "SELECT kind,payload_json,source_updated FROM fixture_availability WHERE fixture_id=?",
+        (fixture_id,),
+    ):
+        try:
+            payload = json.loads(row["payload_json"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if row["kind"] == "injuries":
+            result["injuries"] = [{
+                "team": (item.get("team") or {}).get("name") or "",
+                "player": (item.get("player") or {}).get("name") or "Onbekend",
+                "type": (item.get("player") or {}).get("type") or "",
+                "reason": (item.get("player") or {}).get("reason") or "",
+            } for item in payload]
+        elif row["kind"] == "lineups":
+            result["lineups"] = [{
+                "team": (item.get("team") or {}).get("name") or "",
+                "formation": item.get("formation") or "",
+                "start": [((entry.get("player") or {}).get("name") or "Onbekend")
+                          for entry in item.get("startXI") or []],
+                "bench": [((entry.get("player") or {}).get("name") or "Onbekend")
+                          for entry in item.get("substitutes") or []],
+            } for item in payload]
+    return result
+
+
+def recent_settlements(conn: sqlite3.Connection, lookback_days: int = 10) -> list[dict]:
+    cutoff = (date.today() - timedelta(days=lookback_days)).isoformat()
+    rows = conn.execute(
+        """SELECT f.id,f.match_date,f.kickoff,f.home_goals,f.away_goals,
+                  f.home_goals_ht,f.away_goals_ht,x.external_id,
+                  th.name home,ta.name away
+           FROM fixtures f
+           JOIN fixture_external_ids x ON x.fixture_id=f.id AND x.source='api_football'
+           JOIN teams th ON th.id=f.home_team_id
+           JOIN teams ta ON ta.id=f.away_team_id
+           WHERE f.match_date>=? AND f.home_goals IS NOT NULL AND f.away_goals IS NOT NULL
+           ORDER BY f.match_date DESC""",
+        (cutoff,),
+    ).fetchall()
+    result = []
+    for row in rows:
+        _, movement = _fixture_odds(conn, int(row["id"]))
+        closing = [{"b": item["b"], "s": item["s"], "o": item["c"]} for item in movement]
+        result.append({
+            "id": row["external_id"], "date": row["match_date"],
+            "home": row["home"], "away": row["away"],
+            "hg": row["home_goals"], "ag": row["away_goals"],
+            "hh": row["home_goals_ht"], "ah": row["away_goals_ht"],
+            "closing": closing,
+        })
+    return result
 
 
 def fit_league_snapshot(
@@ -424,6 +551,11 @@ def analyse_fixture(
         "quality": quality,
         "source": source,
         "matchday": matchday,
+        "form": {
+            "home": {key: round(float(hf[key]), 3) for key in ("xg_for", "xg_against", "btts_rate")},
+            "away": {key: round(float(af[key]), 3) for key in ("xg_for", "xg_against", "btts_rate")},
+            "window": window,
+        },
     }
 
 
@@ -442,11 +574,14 @@ def build_day(
                   f.kickoff, f.home_team_id, f.away_team_id,
                   th.name home, ta.name away,
                   f.home_goals, f.away_goals,
-                  f.home_goals_ht, f.away_goals_ht
+                  f.home_goals_ht, f.away_goals_ht,
+                  x.external_id
            FROM fixtures f
            JOIN leagues l ON l.code = f.league_code
            JOIN teams th ON th.id = f.home_team_id
            JOIN teams ta ON ta.id = f.away_team_id
+           LEFT JOIN fixture_external_ids x ON x.fixture_id=f.id
+             AND x.source='api_football'
            WHERE f.match_date = ?
            ORDER BY l.name, f.kickoff, th.name""",
         (target,),
@@ -494,25 +629,12 @@ def build_day(
             for player in player_shot_form(conn, team_id, cutoff):
                 players.append({**player, "team": team_name})
 
-        visible_selections = {
-            "home", "draw", "away", "btts_yes", "btts_no",
-            *(tip.selection for tip in chosen),
-        }
-        placeholders = ",".join("?" for _ in visible_selections)
-        odds = [
-            {"b": row["bookmaker_name"], "s": row["selection_key"], "o": row["odd"]}
-            for row in conn.execute(
-                f"""SELECT bookmaker_name, selection_key, MAX(odd) odd
-                    FROM fixture_odds
-                    WHERE fixture_id=? AND selection_key IN ({placeholders})
-                    GROUP BY bookmaker_name, selection_key
-                    ORDER BY bookmaker_name, selection_key""",
-                (int(f["id"]), *sorted(visible_selections)),
-            )
-        ]
+        odds, odds_history = _fixture_odds(conn, int(f["id"]))
+        availability = _fixture_availability(conn, int(f["id"]))
 
         out.append({
             "league": f["league"], "league_code": f["league_code"],
+            "id": f["external_id"] or f"local-{f['id']}",
             "date": target,
             "kickoff": f["kickoff"] or "",
             "home": f["home"], "away": f["away"],
@@ -523,9 +645,14 @@ def build_day(
             "p_over25": round(pred["probs"]["over_2.5"], 3),
             "p_btts": round(pred["probs"]["btts_yes"], 3),
             "quality": round(quality, 2), "xg_source": source,
+            "form": analysis["form"],
             "score": f"{hg}-{ag}" if played else None,
             "players": players,
             "odds": odds,
+            "odds_history": odds_history,
+            "probs": {key: round(value, 4) for key, value in pred["probs"].items()},
+            "injuries": availability["injuries"],
+            "lineups": availability["lineups"],
             "tips": [{
                 "s": label(t.selection, f["home"], f["away"]),
                 "raw": t.selection, "m": t.market, "p": round(t.model_prob, 3),
@@ -639,6 +766,9 @@ def main_with_args(
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/[]",
         json.dumps(fixtures, ensure_ascii=False, separators=(",", ":")),
+    ).replace(
+        "/*__SETTLEMENTS__*/[]",
+        json.dumps(recent_settlements(conn), ensure_ascii=False, separators=(",", ":")),
     ).replace("__MATCHDAY__", display_matchday).replace(
         "__GENERATED__", datetime.now().strftime("%d-%m-%Y %H:%M"))
 
