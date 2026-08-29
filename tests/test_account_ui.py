@@ -21,9 +21,9 @@ class AccountUiTests(unittest.TestCase):
             'id="bets-view"',
             'id="bet-form"',
             'id="scenario-bankroll"',
-            'src="aftrap-account.js"',
+            'src="aftrap-account.js?v=20260829-2"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js"',
+            'src="aftrap-app.js?v=20260829-2"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
