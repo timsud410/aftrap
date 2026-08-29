@@ -1,7 +1,10 @@
+import math
 import sqlite3
 import unittest
 
+from model import TeamRatings
 from run_tips import (
+    expectation_breakdown,
     matchday_label,
     model_history_summary,
     settle,
@@ -10,6 +13,22 @@ from run_tips import (
 
 
 class SettlementTests(unittest.TestCase):
+    def test_expectation_breakdown_multiplies_back_to_goal_expectation(self):
+        ratings = TeamRatings(
+            attack={"Thuis": 0.12, "Uit": -0.08},
+            defence={"Thuis": 0.05, "Uit": -0.11},
+            intercept=0.30,
+            home_advantage=0.16,
+            rho=0.0,
+        )
+        breakdown = expectation_breakdown(ratings, "Thuis", "Uit")
+        expected_home, expected_away = ratings.expected_goals("Thuis", "Uit")
+        home_product = math.prod(breakdown["home"].values())
+        away_product = math.prod(breakdown["away"].values())
+        self.assertAlmostEqual(home_product, expected_home)
+        self.assertAlmostEqual(away_product, expected_away)
+        self.assertEqual(breakdown["away"]["venue"], 1.0)
+
     def test_first_half_totals_are_settled(self):
         self.assertTrue(settle("fh_over_1.5", 3, 1, 1, 1))
         self.assertFalse(settle("fh_over_1.5", 3, 1, 1, 0))

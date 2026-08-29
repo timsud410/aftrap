@@ -158,45 +158,58 @@
     return ranking.sort((a, b) => b.probability - a.probability || b.expectedValue - a.expectedValue || Number(b.odd.o) - Number(a.odd.o));
   }
 
+  function expectationOrigin(fixture) {
+    const breakdown = fixture.expectation || {};
+    const homeFactors = breakdown.home;
+    const awayFactors = breakdown.away;
+    if (!homeFactors || !awayFactors) return "De doelraming komt uit tijdsgewogen aanval-, defensie- en competitiecijfers.";
+    const effective = fixture.effective_matches || {};
+    const source = fixture.xg_source === "sot_proxy" ? "schoten-op-doelproxy" : fixture.xg_source === "api_football" ? "API-Football xG" : fixture.xg_source === "understat" ? "Understat xG" : "modeldata";
+    const home = teamName(fixture.home);
+    const away = teamName(fixture.away);
+    return `Herleiding: ${home} ${goalText(fixture.lambda_home)} = basis ${goalText(homeFactors.baseline)} × aanval ${goalText(homeFactors.attack)} × defensiecorrectie ${away} ${goalText(homeFactors.opponent_defence)} × thuisfactor ${goalText(homeFactors.venue)}; ${away} ${goalText(fixture.lambda_away)} = basis ${goalText(awayFactors.baseline)} × aanval ${goalText(awayFactors.attack)} × defensiecorrectie ${home} ${goalText(awayFactors.opponent_defence)}. Deze factoren zijn tijdsgewogen uit ${source} met ${Number(effective.home || 0).toFixed(1).replace(".", ",")} / ${Number(effective.away || 0).toFixed(1).replace(".", ",")} effectieve duels.`;
+  }
+
   function modelReason(fixture, key, probability) {
     const home = Number(fixture.lambda_home);
     const away = Number(fixture.lambda_away);
     const total = home + away;
     const lineLabel = value => String(value).replace(".", ",");
     const resultName = key === "home" ? `${teamName(fixture.home)}-winst` : key === "away" ? `${teamName(fixture.away)}-winst` : "gelijkspel";
+    const explain = text => `${text} ${expectationOrigin(fixture)}`;
 
     if (["home", "draw", "away"].includes(key)) {
-      return `Scoremodel: ${goalText(home)}–${goalText(away)} verwachte goals; dat geeft ${pct1(probability)} kans op ${resultName}.`;
+      return explain(`Scoremodel: ${goalText(home)}–${goalText(away)} verwachte goals; dat geeft ${pct1(probability)} kans op ${resultName}.`);
     }
-    if (key === "home_or_draw") return `Thuiswinst ${pct1(fixture.p_home)} + gelijk ${pct1(fixture.p_draw)} = ${pct1(probability)}.`;
-    if (key === "away_or_draw") return `Uitwinst ${pct1(fixture.p_away)} + gelijk ${pct1(fixture.p_draw)} = ${pct1(probability)}.`;
-    if (key === "home_or_away") return `Thuiswinst ${pct1(fixture.p_home)} + uitwinst ${pct1(fixture.p_away)} = ${pct1(probability)} zonder gelijkspel.`;
+    if (key === "home_or_draw") return explain(`Thuiswinst ${pct1(fixture.p_home)} + gelijk ${pct1(fixture.p_draw)} = ${pct1(probability)}.`);
+    if (key === "away_or_draw") return explain(`Uitwinst ${pct1(fixture.p_away)} + gelijk ${pct1(fixture.p_draw)} = ${pct1(probability)}.`);
+    if (key === "home_or_away") return explain(`Thuiswinst ${pct1(fixture.p_home)} + uitwinst ${pct1(fixture.p_away)} = ${pct1(probability)} zonder gelijkspel.`);
 
     let match = key.match(/^(over|under)_([0-9.]+)$/);
-    if (match) return `Verwachting: ${goalText(total)} goals totaal; daaruit volgt ${pct1(probability)} kans op ${match[1]} ${lineLabel(match[2])}.`;
+    if (match) return explain(`Verwachting: ${goalText(total)} goals totaal; daaruit volgt ${pct1(probability)} kans op ${match[1]} ${lineLabel(match[2])}.`);
 
     match = key.match(/^(home|away)_(over|under)_([0-9.]+)$/);
     if (match) {
       const expected = match[1] === "home" ? home : away;
       const team = teamName(match[1] === "home" ? fixture.home : fixture.away);
-      return `Voor ${team} verwacht het model ${goalText(expected)} goals; daarmee ${pct1(probability)} kans op ${match[2]} ${lineLabel(match[3])}.`;
+      return explain(`Voor ${team} verwacht het model ${goalText(expected)} goals; daarmee ${pct1(probability)} kans op ${match[2]} ${lineLabel(match[3])}.`);
     }
 
     if (key === "btts_yes" || key === "btts_no") {
       const outcome = key === "btts_yes" ? "beide teams scoren" : "niet beide teams scoren";
-      return `Goalverwachting ${goalText(home)}–${goalText(away)}; daarmee ${pct1(probability)} kans dat ${outcome}.`;
+      return explain(`Goalverwachting ${goalText(home)}–${goalText(away)}; daarmee ${pct1(probability)} kans dat ${outcome}.`);
     }
 
     const firstHalfRatio = Number.isFinite(Number(fixture.first_half_ratio)) ? Number(fixture.first_half_ratio) : 0.44;
     const firstHalfHome = home * firstHalfRatio;
     const firstHalfAway = away * firstHalfRatio;
     match = key.match(/^fh_(over|under)_([0-9.]+)$/);
-    if (match) return `Voor rust verwacht het model ${goalText(firstHalfHome + firstHalfAway)} goals; daarmee ${pct1(probability)} kans op ${match[1]} ${lineLabel(match[2])}.`;
+    if (match) return explain(`Voor rust verwacht het model ${goalText(firstHalfHome + firstHalfAway)} goals; daarmee ${pct1(probability)} kans op ${match[1]} ${lineLabel(match[2])}.`);
     if (["fh_home", "fh_draw", "fh_away"].includes(key)) {
       const outcome = key === "fh_home" ? `${teamName(fixture.home)} aan de leiding bij rust` : key === "fh_away" ? `${teamName(fixture.away)} aan de leiding bij rust` : "gelijk bij rust";
-      return `Rustmodel: ${goalText(firstHalfHome)}–${goalText(firstHalfAway)} verwachte goals; ${pct1(probability)} kans op ${outcome}.`;
+      return explain(`Rustmodel: ${goalText(firstHalfHome)}–${goalText(firstHalfAway)} verwachte goals; ${pct1(probability)} kans op ${outcome}.`);
     }
-    return `Berekend uit het scoremodel met ${goalText(home)}–${goalText(away)} verwachte goals.`;
+    return explain(`Berekend uit het scoremodel met ${goalText(home)}–${goalText(away)} verwachte goals.`);
   }
 
   function qualityInfo(fixture) {
@@ -416,7 +429,7 @@
       : `<div class="model-quality"><b>${esc(quality.label)}</b><span>Historie op dit niveau is tijdsgewogen. Minimaal effectief aantal duels: ${quality.minimum.toFixed(1).replace(".", ",")}</span></div>`;
     const effective = fixture.effective_matches || {};
     const historyLabel = `${Number(effective.home || 0).toFixed(1).replace(".", ",")} / ${Number(effective.away || 0).toFixed(1).replace(".", ",")}`;
-    document.getElementById("match-dialog-body").innerHTML = `${qualityNote}<div class="match-overview"><div><span>Doelverwachting</span><strong>${Number(fixture.lambda_home).toFixed(2)} – ${Number(fixture.lambda_away).toFixed(2)}</strong></div><div><span>Thuis / gelijk / uit</span><strong>${display.home} · ${display.draw} · ${display.away}</strong></div><div><span>Databron model</span><strong>${esc(sourceLabel)}</strong></div><div><span>Gewogen historie thuis / uit</span><strong>${esc(historyLabel)} duels</strong></div></div><section class="detail-section"><div class="detail-section-head"><h3>Teamvorm</h3><span>laatste ${form.window || 10} competitieduels vóór deze wedstrijd</span></div><div class="team-form-grid"><div><b>${esc(teamName(fixture.home))}</b><span>Modelinput voor ${Number(form.home?.xg_for || 0).toFixed(2)}</span><span>Modelinput tegen ${Number(form.home?.xg_against || 0).toFixed(2)}</span><span>BTTS ${pct1(form.home?.btts_rate)}</span></div><div><b>${esc(teamName(fixture.away))}</b><span>Modelinput voor ${Number(form.away?.xg_for || 0).toFixed(2)}</span><span>Modelinput tegen ${Number(form.away?.xg_against || 0).toFixed(2)}</span><span>BTTS ${pct1(form.away?.btts_rate)}</span></div></div></section><section class="detail-section"><div class="detail-section-head"><h3>Alle modelmarkten</h3><span>Kies een markt voor bookmakervergelijking</span></div>${Object.entries(grouped).map(([group, items]) => `<div class="market-group"><b>${esc(group)}</b><div class="market-chip-grid">${items.map(item => `<button class="market-chip ${item.key === active.key ? "active" : ""}" type="button" data-detail-market="${esc(item.key)}" data-fixture-id="${esc(fixture.id)}"><span>${esc(marketLabel(item.key, fixture))}</span><strong>${display[item.key] || pct1(item.probability)}</strong><small>${item.odd ? `@ ${oddText(item.odd.o)}` : "geen actuele odd"}</small></button>`).join("")}</div></div>`).join("")}</section><section class="detail-section"><div class="detail-section-head"><h3>Bookmakers · ${esc(marketLabel(active.key, fixture))}</h3><span>open → actueel · marge verwijderd waar mogelijk</span></div>${renderOddsComparison(fixture, active.key)}</section><section class="detail-section"><div class="detail-section-head"><h3>Spelersvorm</h3><span>schoten op doel uit recente duels</span></div>${playerForm(fixture)}</section>${availabilityBlock(fixture)}`;
+    document.getElementById("match-dialog-body").innerHTML = `${qualityNote}<div class="match-overview"><div><span>Doelverwachting</span><strong>${Number(fixture.lambda_home).toFixed(2)} – ${Number(fixture.lambda_away).toFixed(2)}</strong></div><div><span>Thuis / gelijk / uit</span><strong>${display.home} · ${display.draw} · ${display.away}</strong></div><div><span>Databron model</span><strong>${esc(sourceLabel)}</strong></div><div><span>Gewogen historie thuis / uit</span><strong>${esc(historyLabel)} duels</strong></div></div><section class="detail-section"><div class="detail-section-head"><h3>Herleiding doelverwachting</h3><span>factor boven 1 verhoogt · onder 1 verlaagt</span></div><p class="expectation-explanation">${esc(expectationOrigin(fixture))}</p></section><section class="detail-section"><div class="detail-section-head"><h3>Teamvorm</h3><span>laatste ${form.window || 10} competitieduels vóór deze wedstrijd</span></div><div class="team-form-grid"><div><b>${esc(teamName(fixture.home))}</b><span>Modelinput voor ${Number(form.home?.xg_for || 0).toFixed(2)}</span><span>Modelinput tegen ${Number(form.home?.xg_against || 0).toFixed(2)}</span><span>BTTS ${pct1(form.home?.btts_rate)}</span></div><div><b>${esc(teamName(fixture.away))}</b><span>Modelinput voor ${Number(form.away?.xg_for || 0).toFixed(2)}</span><span>Modelinput tegen ${Number(form.away?.xg_against || 0).toFixed(2)}</span><span>BTTS ${pct1(form.away?.btts_rate)}</span></div></div></section><section class="detail-section"><div class="detail-section-head"><h3>Alle modelmarkten</h3><span>Kies een markt voor bookmakervergelijking</span></div>${Object.entries(grouped).map(([group, items]) => `<div class="market-group"><b>${esc(group)}</b><div class="market-chip-grid">${items.map(item => `<button class="market-chip ${item.key === active.key ? "active" : ""}" type="button" data-detail-market="${esc(item.key)}" data-fixture-id="${esc(fixture.id)}"><span>${esc(marketLabel(item.key, fixture))}</span><strong>${display[item.key] || pct1(item.probability)}</strong><small>${item.odd ? `@ ${oddText(item.odd.o)}` : "geen actuele odd"}</small></button>`).join("")}</div></div>`).join("")}</section><section class="detail-section"><div class="detail-section-head"><h3>Bookmakers · ${esc(marketLabel(active.key, fixture))}</h3><span>open → actueel · marge verwijderd waar mogelijk</span></div>${renderOddsComparison(fixture, active.key)}</section><section class="detail-section"><div class="detail-section-head"><h3>Spelersvorm</h3><span>schoten op doel uit recente duels</span></div>${playerForm(fixture)}</section>${availabilityBlock(fixture)}`;
     const dialog = document.getElementById("match-dialog");
     const shouldResetScroll = !dialog.open || dialog.dataset.fixtureId !== String(fixture.id);
     dialog.dataset.fixtureId = String(fixture.id);

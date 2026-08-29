@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-5"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-13"',
+            'src="aftrap-app.js?v=20260829-14"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -97,6 +97,11 @@ class AccountUiTests(unittest.TestCase):
 
     def test_chance_ranking_explains_every_model_percentage(self):
         self.assertIn("modelReason", self.app_js)
+        self.assertIn("expectationOrigin", self.app_js)
+        self.assertIn("Herleiding:", self.app_js)
+        self.assertIn("defensiecorrectie", self.app_js)
+        self.assertIn("effectieve duels", self.app_js)
+        self.assertIn("Herleiding doelverwachting", self.app_js)
         self.assertIn("chance-reason", self.app_js)
         self.assertIn("Thuiswinst ${pct1(fixture.p_home)} + gelijk", self.app_js)
         self.assertIn("verwacht het model ${goalText(expected)} goals", self.app_js)

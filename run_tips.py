@@ -31,6 +31,7 @@ from pathlib import Path
 import db as store
 from model import (
     MatchObservation,
+    TeamRatings,
     data_quality_score,
     fit_ratings,
     initialise_promoted,
@@ -52,6 +53,33 @@ MONTH_LABELS = (
 
 # xG-bronnen in volgorde van betrouwbaarheid.
 XG_PREFERENCE = ("understat", "api_football", "sot_proxy")
+
+
+def expectation_breakdown(
+    ratings: TeamRatings, home_team: str, away_team: str
+) -> dict[str, dict[str, float]]:
+    """Maak de log-lineaire doelverwachting uitlegbaar als factoren.
+
+    De factoren vermenigvuldigen exact terug naar lambda en mu. Daardoor laat
+    de interface niet alleen de eindraming zien, maar ook welk deel uit het
+    competitieniveau, de aanval, de defensie van de tegenstander en het
+    thuisvoordeel komt.
+    """
+    baseline = math.exp(ratings.intercept)
+    return {
+        "home": {
+            "baseline": baseline,
+            "attack": math.exp(ratings.attack[home_team]),
+            "opponent_defence": math.exp(-ratings.defence[away_team]),
+            "venue": math.exp(ratings.home_advantage),
+        },
+        "away": {
+            "baseline": baseline,
+            "attack": math.exp(ratings.attack[away_team]),
+            "opponent_defence": math.exp(-ratings.defence[home_team]),
+            "venue": 1.0,
+        },
+    }
 
 def load_signal_performance(path: Path = WEIGHTS_FILE) -> dict[str, SignalPerformance]:
     """Lees uitsluitend door de walk-forward backtest goedgekeurde gewichten."""
@@ -651,6 +679,9 @@ def analyse_fixture(
     )
     return {
         "prediction": pred,
+        "expectation": expectation_breakdown(
+            fixture_ratings, fixture["home"], fixture["away"]
+        ),
         "signals": collect_signals(ctx),
         "quality": quality,
         "effective_matches": {
@@ -757,6 +788,13 @@ def build_day(
             "effective_matches": {
                 key: round(float(value), 2)
                 for key, value in analysis["effective_matches"].items()
+            },
+            "expectation": {
+                side: {
+                    key: round(float(value), 3)
+                    for key, value in factors.items()
+                }
+                for side, factors in analysis["expectation"].items()
             },
             "form": analysis["form"],
             "score": f"{hg}-{ag}" if played else None,
