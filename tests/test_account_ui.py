@@ -81,6 +81,10 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("b.probability - a.probability", self.app_js)
         self.assertIn("Number(odd.o) < state.minimumOdd", self.app_js)
 
+    def test_chance_ranking_odds_are_visible_on_light_rows(self):
+        self.assertIn(".chance-row .odd-pill", self.template)
+        self.assertIn("background: #f3faea; color: #29410f", self.template)
+
     def test_value_bet_and_auto_settlement_are_wired(self):
         self.assertIn("fairMarketProbability", self.app_js)
         self.assertIn("data-add-bet", self.app_js)
