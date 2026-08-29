@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-5"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-10"',
+            'src="aftrap-app.js?v=20260829-11"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -96,8 +96,9 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("overflow-x: hidden", self.template)
         self.assertIn('id="dashboard-stats"', self.template)
         self.assertIn("renderDashboardStats", self.app_js)
-        self.assertIn("Beste value", self.app_js)
-        self.assertIn("Value #${index + 1}", self.app_js)
+        self.assertIn('label: "Winnaar value"', self.app_js)
+        self.assertIn('label: "Goals value"', self.app_js)
+        self.assertIn('label: "BTTS value"', self.app_js)
         self.assertIn('data-open-market="${esc(card.action.key)}"', self.app_js)
         self.assertIn("expectedValue: probability * Number(odd.o) - 1", self.app_js)
         self.assertIn("const breakEven = 1 / Number(odd.o)", self.app_js)
@@ -134,6 +135,11 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("DASHBOARD_MIN_QUALITY = 0.62", self.app_js)
         self.assertIn("DASHBOARD_MIN_EFFECTIVE_MATCHES = 10", self.app_js)
         self.assertIn("item.expectedValue >= DASHBOARD_MIN_EV", self.app_js)
+        self.assertIn("item.expectedValue <= DASHBOARD_MAX_EV", self.app_js)
+        self.assertIn("item.marketDifference <= DASHBOARD_MAX_MARKET_GAP", self.app_js)
+        self.assertIn('minProbability: 0.50, maxOdd: 2.50', self.app_js)
+        self.assertIn('minProbability: 0.50, maxOdd: 2.50', self.app_js)
+        self.assertIn('minProbability: 0.48, maxOdd: 2.50', self.app_js)
         self.assertIn('expectedValue > 0 ? "value"', self.app_js)
         self.assertIn("model-warning", self.app_js)
 

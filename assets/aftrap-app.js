@@ -12,6 +12,13 @@
   const DASHBOARD_MIN_QUALITY = 0.62;
   const DASHBOARD_MIN_EFFECTIVE_MATCHES = 10;
   const DASHBOARD_MIN_EV = 0.02;
+  const DASHBOARD_MAX_EV = 0.20;
+  const DASHBOARD_MAX_MARKET_GAP = 0.15;
+  const DASHBOARD_VALUE_RULES = [
+    { label: "Winnaar value", empty: "winnaar", minProbability: 0.50, maxOdd: 2.50, matches: key => ["home", "away"].includes(key) },
+    { label: "Goals value", empty: "over/under-goals", minProbability: 0.50, maxOdd: 2.50, matches: key => /^(over|under)_/.test(key) },
+    { label: "BTTS value", empty: "BTTS", minProbability: 0.48, maxOdd: 2.50, matches: key => ["btts_yes", "btts_no"].includes(key) },
+  ];
   const PAGE_SIZE = 20;
   const state = { view: "tips", date: "all", league: "all", market: "all", bookmaker: "best", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
   const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
@@ -262,18 +269,40 @@
       return item.quality >= DASHBOARD_MIN_QUALITY && Math.min(Number(effective.home ?? 0), Number(effective.away ?? 0)) >= DASHBOARD_MIN_EFFECTIVE_MATCHES;
     });
     const topChance = [...trusted].sort((a, b) => b.probability - a.probability)[0];
-    const valueTips = [...trusted].filter(item => item.expectedValue >= DASHBOARD_MIN_EV && String(item.fixture.id) !== String(topChance?.fixture.id)).sort((a, b) => b.expectedValue - a.expectedValue || b.probability - a.probability).filter((item, index, all) => all.findIndex(candidate => String(candidate.fixture.id) === String(item.fixture.id)) === index).slice(0, 3);
-    const tipCard = (label, item, value, kind) => item ? {
+    const isRealisticValue = (item, rule) => {
+      const odd = Number(item.odd.o);
+      return rule.matches(item.key)
+        && item.probability >= rule.minProbability
+        && odd <= rule.maxOdd
+        && item.expectedValue >= DASHBOARD_MIN_EV
+        && item.expectedValue <= DASHBOARD_MAX_EV
+        && item.marketDifference != null
+        && item.marketDifference >= 0.01
+        && item.marketDifference <= DASHBOARD_MAX_MARKET_GAP;
+    };
+    const usedFixtures = new Set();
+    const valueTips = DASHBOARD_VALUE_RULES.map(rule => {
+      const candidates = trusted.filter(item => isRealisticValue(item, rule)).sort((a, b) => b.expectedValue - a.expectedValue || b.probability - a.probability);
+      const item = candidates.find(candidate => !usedFixtures.has(String(candidate.fixture.id))) || candidates[0] || null;
+      if (item) usedFixtures.add(String(item.fixture.id));
+      return { rule, item };
+    });
+    const tipCard = (label, item, value, kind, emptyDetail = null) => item ? {
       label, value, kind, fixture: `${teamName(item.fixture.home)} – ${teamName(item.fixture.away)}`,
       selection: marketLabel(item.key, item.fixture), model: item.probability,
       reference: item.breakEven, referenceLabel: "Break-even", bookmaker: item.odd.b,
       odd: Number(item.odd.o), kickoff: `${shortDate(item.fixture.date)} · ${item.fixture.kickoff || "tijd n.n.b."}`,
       action: item,
-    } : { label, value: "—", kind, detail: `Geen betrouwbare actuele selectie vanaf @${oddText(state.minimumOdd)}` };
-    const valueCard = (item, index) => tipCard(index === 0 ? "Beste value" : `Value #${index + 1}`, item, item ? signedPercent(item.expectedValue) : "—", "value");
+    } : { label, value: "—", kind, detail: emptyDetail || `Geen betrouwbare actuele selectie vanaf @${oddText(state.minimumOdd)}` };
     const cards = [
       { ...tipCard("Hoogste modelkans", topChance, topChance ? pct1(topChance.probability) : "—", "probability"), primary: true },
-      ...[0, 1, 2].map(index => valueCard(valueTips[index], index)),
+      ...valueTips.map(({ rule, item }) => tipCard(
+        rule.label,
+        item,
+        item ? signedPercent(item.expectedValue) : "—",
+        "value",
+        `Geen realistische ${rule.empty}-value vanaf @${oddText(state.minimumOdd)}`,
+      )),
     ];
     document.getElementById("dashboard-stats").innerHTML = cards.map(card => {
       if (!card.action) return `<article class="dashboard-stat empty-stat"><div class="dashboard-stat-head"><span>${esc(card.label)}</span></div><strong>${esc(card.value)}</strong><small>${esc(card.detail)}</small></article>`;
