@@ -128,12 +128,26 @@ class ApiFootballStorageTests(unittest.TestCase):
                 }],
             }
             self.assertEqual(_store_player_fixture(self.conn, item), 1)
+        one_match_outlier = {
+            "fixture": {"id": 900099, "date": "2026-08-27T15:00:00+02:00"},
+            "players": [{
+                "team": {"id": 50, "name": "Manchester City"},
+                "players": [{
+                    "player": {"id": 779, "name": "Eenmalige Uitschieter"},
+                    "statistics": [{
+                        "games": {"minutes": 15},
+                        "shots": {"total": 9, "on": 9},
+                    }],
+                }],
+            }],
+        }
+        self.assertEqual(_store_player_fixture(self.conn, one_match_outlier), 1)
         self.conn.commit()
 
         form = player_shot_form(
             self.conn, int(team_id), "2026-08-29", appearances=5
         )
-        self.assertEqual(len(form), 1)
+        self.assertEqual(len(form), 2)
         self.assertEqual(form[0]["name"], "Test Spits")
         self.assertEqual(form[0]["n"], 5)
         self.assertEqual(form[0]["sot_avg"], 2.2)

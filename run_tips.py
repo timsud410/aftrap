@@ -201,7 +201,7 @@ def player_shot_form(
         })
     candidates.sort(
         key=lambda item: (
-            item["sot_avg"], item["sot_hit_rate"], item["shots_avg"], item["n"]
+            item["n"], item["sot_avg"], item["sot_hit_rate"], item["shots_avg"]
         ),
         reverse=True,
     )
