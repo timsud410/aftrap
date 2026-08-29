@@ -166,8 +166,8 @@ def player_shot_form(
     """Beste recente schotprofielen, op maximaal vijf eerdere optredens.
 
     Dit is beschrijvende vormdata en nadrukkelijk geen gekalibreerde
-    spelers-probability. Spelers met minder dan drie bruikbare optredens worden
-    niet getoond om uitschieters uit één invalbeurt te voorkomen.
+    spelers-probability. De steekproefgrootte blijft zichtbaar, ook als door de
+    start van een nieuw seizoen nog minder dan vijf optredens beschikbaar zijn.
     """
     rows = conn.execute(
         """SELECT p.id, p.name, s.match_date, s.minutes,
@@ -188,8 +188,6 @@ def player_shot_form(
 
     candidates = []
     for player_rows in by_player.values():
-        if len(player_rows) < 3:
-            continue
         sot = [int(row["shots_on_target"]) for row in player_rows]
         shots = [int(row["shots"] or 0) for row in player_rows]
         hits = sum(value >= 1 for value in sot)
