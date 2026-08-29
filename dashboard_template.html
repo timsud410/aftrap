@@ -645,7 +645,7 @@
     .dashboard-stat-number strong,.dashboard-stat.value .dashboard-stat-number strong,.dashboard-stat.primary .dashboard-stat-number strong { color: #fff; text-shadow: 0 2px 8px rgba(15,30,55,.12); }
     .dashboard-stat-number small { color: rgba(255,255,255,.86); }
     .dashboard-stat-fixture { color: #fff; }
-    .dashboard-stat-selection,.dashboard-stat-selection em { color: #fff; font-weight: 800; }
+    .dashboard-stat .dashboard-stat-selection,.dashboard-stat .dashboard-stat-selection em { color: #fff; font-weight: 800; }
     .dashboard-stat.empty-stat > strong { color: #fff; }
     .dashboard-stat.empty-stat > small { color: rgba(255,255,255,.86); }
     .dashboard-stat-compare span,.dashboard-stat-compare strong,.dashboard-stat.primary .dashboard-stat-compare strong { color: rgba(255,255,255,.92); }
@@ -990,7 +990,7 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
-  <script src="aftrap-app.js?v=20260829-12"></script>
+  <script src="aftrap-app.js?v=20260829-13"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260829-5"></script>
 </body>

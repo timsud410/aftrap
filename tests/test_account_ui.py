@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-5"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-12"',
+            'src="aftrap-app.js?v=20260829-13"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -118,7 +118,7 @@ class AccountUiTests(unittest.TestCase):
         self.assertNotIn('{ label: "Beschikbare kansen"', self.app_js)
         self.assertNotIn('{ label: "Bookmakers"', self.app_js)
         self.assertNotIn('{ label: "Odds bijgewerkt"', self.app_js)
-        self.assertIn('.dashboard-stat-selection,.dashboard-stat-selection em { color: #fff; font-weight: 800; }', self.template)
+        self.assertIn('.dashboard-stat .dashboard-stat-selection,.dashboard-stat .dashboard-stat-selection em { color: #fff; font-weight: 800; }', self.template)
 
     def test_mobile_safe_area_and_dialog_state_are_stable(self):
         self.assertIn(".topbar { position: fixed; right: 0; left: 0; }", self.template)
