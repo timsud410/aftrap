@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 
 import db as store
-from load_api_football import store_fixture
+from load_api_football import TEAM_NAME_ALIASES, resolve_team, store_fixture
 from run_tips import pick_upcoming_dates
 
 
@@ -48,6 +48,23 @@ class ApiFootballStorageTests(unittest.TestCase):
             (fixture_id,),
         ).fetchone()
         self.assertEqual((row["home"], row["away"]), ("Man City", "Man United"))
+
+    def test_every_declared_name_alias_resolves_to_history(self):
+        for (league, _), historical_name in TEAM_NAME_ALIASES.items():
+            store.team_id(self.conn, league, historical_name)
+        self.conn.commit()
+
+        for api_id, ((league, api_name), historical_name) in enumerate(
+            TEAM_NAME_ALIASES.items(), start=1000
+        ):
+            team_id, created = resolve_team(
+                self.conn, league, api_id, api_name
+            )
+            row = self.conn.execute(
+                "SELECT name FROM teams WHERE id=?", (team_id,)
+            ).fetchone()
+            self.assertFalse(created, f"{league}: {api_name}")
+            self.assertEqual(row["name"], historical_name)
 
     def test_external_id_updates_postponed_fixture_in_place(self):
         fixture_id, _, _ = store_fixture(self.conn, "EPL", FIXTURE)
