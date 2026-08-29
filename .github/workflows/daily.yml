@@ -1,0 +1,68 @@
+# Draait elke ochtend vanzelf. Jij hoeft hier nooit iets aan te doen.
+#
+# Wat er gebeurt:
+#   1. GitHub start een verse Linux-machine
+#   2. Haalt de nieuwste wedstrijddata op van football-data.co.uk
+#   3. Fit het model en genereert de tips
+#   4. Publiceert de pagina op je eigen adres
+#
+# Je hoeft je Mac niet aan te hebben staan.
+
+name: Dagelijkse tips
+
+on:
+  schedule:
+    # 05:00 UTC = 07:00 Nederlandse zomertijd, 06:00 in de winter.
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installeer wat het model nodig heeft
+        run: pip install numpy scipy
+
+      # De ruwe CSV's veranderen niet met terugwerkende kracht, dus we
+      # bewaren ze tussen runs. Scheelt football-data.co.uk honderd
+      # downloads per dag en maakt de run sneller.
+      - name: Hergebruik eerder opgehaalde data
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: fdcouk-${{ github.run_id }}
+          restore-keys: fdcouk-
+
+      - name: Haal data op en genereer de tips
+        run: python build_site.py
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
