@@ -44,6 +44,10 @@ DEFAULT_DB = str(HERE / "data" / "aftrap.sqlite")
 TEMPLATE = HERE / "dashboard_template.html"
 DEFAULT_OUT = str(HERE / "aftrap.html")
 WEIGHTS_FILE = HERE / "signal_weights.json"
+MONTH_LABELS = (
+    "jan", "feb", "mrt", "apr", "mei", "jun",
+    "jul", "aug", "sep", "okt", "nov", "dec",
+)
 
 # xG-bronnen in volgorde van betrouwbaarheid.
 XG_PREFERENCE = ("understat", "api_football", "sot_proxy")
@@ -185,6 +189,18 @@ def pick_upcoming_dates(
             (start.isoformat(), end.isoformat()),
         )
     ]
+
+
+def matchday_label(targets: list[str]) -> str:
+    """Korte Nederlandse datumregel voor de kop van het dashboard."""
+    parsed = [date.fromisoformat(value) for value in targets]
+    start, end = parsed[0], parsed[-1]
+    first = f"{start.day} {MONTH_LABELS[start.month - 1]}"
+    if start == end:
+        return f"{first} {start.year}"
+    last = f"{end.day} {MONTH_LABELS[end.month - 1]}"
+    suffix = f" {end.year}" if end.year != start.year else ""
+    return f"{first} – {last}{suffix}"
 
 
 # ------------------------------------------------------------
@@ -540,13 +556,11 @@ def main_with_args(
         print(f"  {hits} van {len(settled)} afgewikkelde tips kwam uit "
               f"({hits / len(settled):.0%})")
 
-    matchday_label = (
-        f"{targets[0]} t/m {targets[-1]}" if len(targets) > 1 else targets[0]
-    )
+    display_matchday = matchday_label(targets)
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/[]",
         json.dumps(fixtures, ensure_ascii=False, separators=(",", ":")),
-    ).replace("__MATCHDAY__", matchday_label).replace(
+    ).replace("__MATCHDAY__", display_matchday).replace(
         "__GENERATED__", datetime.now().strftime("%d-%m-%Y %H:%M"))
 
     out = Path(args.out)
