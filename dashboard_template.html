@@ -1,0 +1,469 @@
+<title>Aftrap Speeldagboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground:   #F4F1F0;
+    --surface:  #FFFFFF;
+    --sunken:   #EDE9E8;
+    --ink:      #16161A;
+    --ink-soft: #4A4A52;
+    --muted:    #8A868C;
+    --faint:    #ADA8AE;
+    --rule:     #E7E2E1;
+    --accent:   #C7365A;
+    --accent-tint: #C7365A14;
+    --contrast: #16161A;
+    --on-contrast: #FFFFFF;
+    --good:     #1B7A4B;
+    --good-tint:#1B7A4B14;
+
+    --shadow-sm: 0 1px 2px rgba(22,22,26,.05), 0 1px 3px rgba(22,22,26,.04);
+    --shadow-md: 0 2px 4px rgba(22,22,26,.04), 0 6px 16px rgba(22,22,26,.06);
+
+    --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+
+    --f-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+    --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #131215;
+      --surface:  #1C1A1E;
+      --sunken:   #0E0D10;
+      --ink:      #F0EDEE;
+      --ink-soft: #C3BDC0;
+      --muted:    #918B93;
+      --faint:    #6E6872;
+      --rule:     #2C2930;
+      --accent:   #E8557A;
+      --accent-tint: #E8557A1F;
+      --contrast: #F0EDEE;
+      --on-contrast: #16161A;
+      --good:     #4FBE86;
+      --good-tint:#4FBE861F;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 8px 20px rgba(0,0,0,.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:   #131215;
+    --surface:  #1C1A1E;
+    --sunken:   #0E0D10;
+    --ink:      #F0EDEE;
+    --ink-soft: #C3BDC0;
+    --muted:    #918B93;
+    --faint:    #6E6872;
+    --rule:     #2C2930;
+    --accent:   #E8557A;
+    --accent-tint: #E8557A1F;
+    --contrast: #F0EDEE;
+    --on-contrast: #16161A;
+    --good:     #4FBE86;
+    --good-tint:#4FBE861F;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 8px 20px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-ui);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: var(--s6) var(--s5) var(--s8); }
+
+  /* ---------- kop ---------- */
+
+  .masthead {
+    display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: var(--s4);
+    margin-bottom: var(--s5);
+  }
+
+  .brand { display: flex; align-items: center; gap: var(--s3); }
+
+  .mark {
+    width: 42px; height: 42px; flex: none;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    display: grid; place-items: center;
+    color: #fff; font-weight: 800; font-size: 18px; letter-spacing: -0.02em;
+  }
+
+  .wordmark {
+    margin: 0; font-size: 26px; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.1;
+  }
+
+  .wordmark small {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--muted); letter-spacing: 0;
+  }
+
+  .stamp {
+    background: var(--contrast); color: var(--on-contrast);
+    border-radius: var(--r-pill); padding: 8px 18px;
+    font-size: 13px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- meldingen ---------- */
+
+  .notice {
+    background: var(--accent-tint);
+    border-radius: var(--r-md);
+    padding: var(--s4) var(--s5);
+    font-size: 14px; color: var(--ink-soft);
+    margin-bottom: var(--s5);
+  }
+
+  .notice b { color: var(--accent); font-weight: 700; }
+
+  /* ---------- kerncijfers ---------- */
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--s3);
+    margin-bottom: var(--s6);
+  }
+
+  .stat {
+    background: var(--surface); border-radius: var(--r-md);
+    padding: var(--s4) var(--s5); box-shadow: var(--shadow-sm);
+  }
+
+  .stat.dark { background: var(--contrast); }
+  .stat.dark .stat-label { color: rgba(255,255,255,.55); }
+  :root[data-theme="dark"] .stat.dark .stat-label,
+  :root:not([data-theme="light"]) .stat.dark .stat-label { color: rgba(0,0,0,.5); }
+  .stat.dark .stat-value, .stat.dark .stat-sub { color: var(--on-contrast); }
+
+  .stat-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--faint);
+  }
+
+  .stat-value {
+    font-size: 30px; font-weight: 800; letter-spacing: -0.03em;
+    line-height: 1.15; font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+
+  .stat-value .unit { font-size: 16px; font-weight: 600; color: var(--muted); }
+  .stat-sub { font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- competitie ---------- */
+
+  .league { margin-bottom: var(--s6); }
+
+  .league-head {
+    display: flex; align-items: center; gap: var(--s3);
+    margin-bottom: var(--s3); padding-left: var(--s2);
+  }
+
+  .league-name {
+    margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+  }
+
+  .league-meta { font-size: 12.5px; color: var(--faint); margin-left: auto; }
+
+  /* ---------- wedstrijd ---------- */
+
+  .fixtures { display: flex; flex-direction: column; gap: var(--s3); }
+
+  .fixture {
+    background: var(--surface); border-radius: var(--r-lg);
+    padding: var(--s4) var(--s5); box-shadow: var(--shadow-sm);
+  }
+
+  .fixture.silent { background: transparent; box-shadow: none; border: 1px dashed var(--rule); }
+
+  .fx-top {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: var(--s3) var(--s4);
+  }
+
+  .kickoff {
+    font-size: 12.5px; font-weight: 600; color: var(--muted);
+    font-variant-numeric: tabular-nums; min-width: 42px;
+  }
+
+  .teams { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; }
+  .teams .vs { color: var(--faint); font-weight: 500; padding: 0 7px; }
+
+  .result {
+    background: var(--contrast); color: var(--on-contrast);
+    border-radius: var(--r-sm); padding: 3px 10px;
+    font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+
+  .proxy {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--muted);
+    background: var(--sunken); border-radius: var(--r-pill); padding: 2px 9px;
+  }
+
+  .numstrip {
+    margin-left: auto; display: flex; gap: var(--s4);
+    font-family: var(--f-num); font-size: 11.5px;
+    font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap;
+  }
+
+  .numstrip i { font-style: normal; color: var(--faint); }
+  .numstrip b { font-weight: 500; color: var(--ink-soft); }
+
+  /* ---------- tips ---------- */
+
+  .tips { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s4); }
+
+  .tip {
+    display: grid; grid-template-columns: 20px 1fr; gap: var(--s3);
+    background: var(--sunken); border-radius: var(--r-md); padding: var(--s3) var(--s4);
+  }
+
+  /* Vertrouwen als dichtheid, niet als stoplicht: dit zegt hoe zeker het
+     model is, niet of je moet inzetten. */
+  .weight { display: flex; flex-direction: column-reverse; gap: 3px; padding-top: 6px; }
+  .weight i { display: block; height: 4px; border-radius: 2px; background: var(--rule); }
+  .weight i.on { background: var(--accent); }
+
+  .tip-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
+  .tip-sel { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+
+  .tip-prob {
+    font-size: 15px; font-weight: 800; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tag {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--surface); border-radius: var(--r-pill); padding: 2px 10px;
+  }
+
+  .verdict {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; border-radius: var(--r-pill); padding: 2px 10px;
+  }
+
+  /* Groen voor raak, grijs voor mis. Bewust geen rood: het accent is al
+     karmijn, en een rode misser zou de merkkleur laten schreeuwen. */
+  .verdict.hit  { color: var(--good); background: var(--good-tint); }
+  .verdict.miss { color: var(--faint); background: var(--surface); }
+
+  .tip-why {
+    margin: var(--s1) 0 0; font-size: 13.5px; line-height: 1.5;
+    color: var(--ink-soft); max-width: 70ch;
+  }
+
+  .tip-src { margin-top: 5px; font-family: var(--f-num); font-size: 10.5px; color: var(--faint); }
+
+  .notip { margin-top: var(--s3); font-size: 13px; color: var(--faint); }
+
+  /* ---------- voetnoot ---------- */
+
+  .footnote {
+    background: var(--surface); border-radius: var(--r-lg);
+    padding: var(--s5); box-shadow: var(--shadow-sm);
+    font-size: 13.5px; color: var(--ink-soft); max-width: 74ch;
+  }
+
+  .footnote h3 {
+    margin: 0 0 var(--s3); font-size: 15px; font-weight: 700; color: var(--ink);
+  }
+
+  .footnote p { margin: 0 0 var(--s3); }
+  .footnote p:last-child { margin-bottom: 0; }
+  .footnote strong { color: var(--ink); font-weight: 700; }
+
+  @media (max-width: 680px) {
+    .wrap { padding: var(--s5) var(--s4) var(--s7); }
+    .numstrip { margin-left: 0; width: 100%; flex-wrap: wrap; gap: var(--s3); }
+    .stat-value { font-size: 26px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">A</div>
+      <h1 class="wordmark">Aftrap<small>speeldag __MATCHDAY__</small></h1>
+    </div>
+    <div class="stamp" id="stamp">gegenereerd __GENERATED__</div>
+  </header>
+
+  <div class="notice" id="notice"></div>
+
+  <section class="stats" id="stats"></section>
+
+  <main id="board"></main>
+
+  <div class="footnote">
+    <h3>Hoe je dit leest</h3>
+    <p>
+      <strong>Het model wist niets van deze speeldag.</strong> Het is gefit op
+      uitsluitend wedstrijden van vóór deze datum, dus de tips zijn wat je die
+      ochtend gezien zou hebben. De uitslagen staan er alleen naast om te
+      controleren, niet om mee te rekenen.
+    </p>
+    <p>
+      <strong>De streepjes zijn zekerheid, geen advies.</strong> Ze zeggen hoe
+      uitgesproken het model is. Er zitten geen quoteringen in de berekening,
+      dus dit rangschikt op onderbouwing en niet op rendement.
+    </p>
+    <p>
+      <strong>Wedstrijden zonder tip zijn het punt, niet een gebrek.</strong>
+      Een systeem dat elke dag verplicht drie tips per wedstrijd levert, vult
+      de gaten met ruis.
+    </p>
+    <p>
+      <strong>Elk cijfer in een onderbouwing komt uit de database.</strong> De
+      zinnen worden opgebouwd uit vaste sjablonen met de ruwe waarden erin.
+    </p>
+  </div>
+
+</div>
+
+<script>
+const DATA = /*__DATA__*/[];
+// Wordt alleen door de demo-bouwer op true gezet. Zo kan een pagina met
+// verzonnen teamsterktes zichzelf nooit voordoen als echte uitkomsten.
+const DEMO = /*__DEMO__*/false;
+
+const BAND = {
+  high:      { fill: 3, label: "hoog" },
+  medium:    { fill: 2, label: "gemiddeld" },
+  low:       { fill: 1, label: "laag" },
+  thin_data: { fill: 1, label: "weinig data" }
+};
+
+const SOURCE_LABEL = {
+  understat: null, api_football: null, sot_proxy: "schoten op doel"
+};
+
+const pct = v => Math.round(v * 100) + "%";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+function weightMark(band) {
+  const n = BAND[band].fill;
+  let h = `<div class="weight" role="img" aria-label="vertrouwen: ${BAND[band].label}">`;
+  for (let i = 0; i < 3; i++) h += `<i class="${i < n ? "on" : ""}"></i>`;
+  return h + "</div>";
+}
+
+function renderStats() {
+  const tips = DATA.flatMap(f => f.tips);
+  const settled = tips.filter(t => t.hit !== null && t.hit !== undefined);
+  const hits = settled.filter(t => t.hit).length;
+  const silent = DATA.filter(f => f.tips.length === 0).length;
+  const strong = tips.filter(t => t.b === "high").length;
+
+  const cells = [
+    ["Wedstrijden", DATA.length, `${new Set(DATA.map(f => f.league)).size} competities`],
+    ["Tips", tips.length, "max 3 per wedstrijd"],
+    ["Hoog vertrouwen", strong, `van de ${tips.length}`],
+    ["Geen tip", silent, "signalen te zwak"]
+  ];
+
+  let html = cells.map(([l, v, s]) =>
+    `<div class="stat"><div class="stat-label">${l}</div>
+     <div class="stat-value">${v}</div><div class="stat-sub">${s}</div></div>`).join("");
+
+  if (settled.length) {
+    html += `<div class="stat dark"><div class="stat-label">Uitgekomen</div>
+      <div class="stat-value">${Math.round(hits / settled.length * 100)}<span class="unit">%</span></div>
+      <div class="stat-sub">${hits} van ${settled.length}</div></div>`;
+  }
+  document.getElementById("stats").innerHTML = html;
+
+  const n = settled.length;
+  document.getElementById("notice").innerHTML = DEMO
+    ? `<b>Ontwerpvoorbeeld.</b> De teamsterktes zijn gesimuleerd, niet echt. Ze
+       gaan wel door het werkelijke model en de werkelijke tipselectie, dus de
+       onderlinge verhoudingen kloppen: kansen tellen op tot 100%, tips spreken
+       elkaar niet tegen, en wedstrijden zonder signaal krijgen geen tip.`
+    : n
+    ? `<b>Terugkijkmodus.</b> Het model is gefit op uitsluitend data van vóór deze
+       speeldag en kende de uitslagen niet. Van ${n} afgewikkelde tips kwamen er
+       ${hits} uit. Bij deze aantallen zegt dat nog niets over kwaliteit —
+       daar zijn honderden speeldagen voor nodig.`
+    : `<b>Vooruitblik.</b> Deze wedstrijden zijn nog niet gespeeld.`;
+}
+
+function renderBoard() {
+  const groups = [];
+  for (const f of DATA) {
+    let g = groups.find(x => x.name === f.league);
+    if (!g) { g = { name: f.league, fixtures: [] }; groups.push(g); }
+    g.fixtures.push(f);
+  }
+
+  document.getElementById("board").innerHTML = groups.map(g => {
+    const n = g.fixtures.reduce((a, f) => a + f.tips.length, 0);
+
+    const cards = g.fixtures.map(f => {
+      const proxy = SOURCE_LABEL[f.xg_source];
+      const strip = `<div class="numstrip">
+        <span><i>model</i> <b>${f.lambda_home.toFixed(2)}–${f.lambda_away.toFixed(2)}</b></span>
+        <span><i>1</i> <b>${pct(f.p_home)}</b> <i>X</i> <b>${pct(f.p_draw)}</b> <i>2</i> <b>${pct(f.p_away)}</b></span>
+        <span><i>o2.5</i> <b>${pct(f.p_over25)}</b></span>
+        <span><i>btts</i> <b>${pct(f.p_btts)}</b></span></div>`;
+
+      const head = `<div class="fx-top">
+        ${f.kickoff ? `<span class="kickoff">${esc(f.kickoff)}</span>` : ""}
+        <span class="teams">${esc(f.home)}<span class="vs">–</span>${esc(f.away)}</span>
+        ${f.score ? `<span class="result">${esc(f.score)}</span>` : ""}
+        ${proxy ? `<span class="proxy">${proxy}</span>` : ""}
+        ${strip}</div>`;
+
+      const body = f.tips.length
+        ? `<div class="tips">` + f.tips.map(t => {
+            const verdict = t.hit === true ? `<span class="verdict hit">uitgekomen</span>`
+                          : t.hit === false ? `<span class="verdict miss">niet uit</span>` : "";
+            return `<article class="tip">${weightMark(t.b)}<div>
+              <div class="tip-head">
+                <span class="tip-sel">${esc(t.s)}</span>
+                <span class="tip-prob">${pct(t.p)}</span>
+                <span class="tag">${esc(t.m)}</span>
+                <span class="tag">${BAND[t.b].label}</span>
+                ${verdict}
+              </div>
+              <p class="tip-why">${esc(t.r)}</p>
+              <div class="tip-src">signaal: ${esc(t.g.join(", "))}</div>
+            </div></article>`;
+          }).join("") + `</div>`
+        : `<div class="notip">Geen tip — geen signaal sterk genoeg voor deze wedstrijd.</div>`;
+
+      return `<div class="fixture${f.tips.length ? "" : " silent"}">${head}${body}</div>`;
+    }).join("");
+
+    return `<section class="league">
+      <div class="league-head">
+        <h2 class="league-name">${esc(g.name)}</h2>
+        <span class="league-meta">${g.fixtures.length} wedstrijden · ${n} tips</span>
+      </div>
+      <div class="fixtures">${cards}</div></section>`;
+  }).join("");
+}
+
+if (DATA.length) { renderStats(); renderBoard(); }
+else {
+  document.getElementById("notice").innerHTML =
+    "<b>Nog geen data.</b> Draai eerst load_fdcouk.py en daarna run_tips.py.";
+}
+</script>
