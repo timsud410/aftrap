@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-5"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-11"',
+            'src="aftrap-app.js?v=20260829-12"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -72,6 +72,16 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("Break-even", self.template)
         self.assertIn("fixture.odds", self.template)
         self.assertIn("odd.s===key", self.template)
+        self.assertIn('bookmaker: "auto"', self.app_js)
+        self.assertIn('=== "bet365"', self.app_js)
+        self.assertIn('select.value = state.bookmaker', self.app_js)
+
+    def test_programme_opens_on_today_or_next_matchday(self):
+        self.assertIn('date: "auto"', self.app_js)
+        self.assertIn("defaultProgrammeDate", self.app_js)
+        self.assertIn("dates.includes(today) ? today", self.app_js)
+        self.assertIn("dates.find(day => day > today)", self.app_js)
+        self.assertIn('state.date === day ? "active"', self.app_js)
 
     def test_minimum_odd_ranking_is_wired(self):
         self.assertIn('id="minimum-odd"', self.template)
@@ -108,6 +118,7 @@ class AccountUiTests(unittest.TestCase):
         self.assertNotIn('{ label: "Beschikbare kansen"', self.app_js)
         self.assertNotIn('{ label: "Bookmakers"', self.app_js)
         self.assertNotIn('{ label: "Odds bijgewerkt"', self.app_js)
+        self.assertIn('.dashboard-stat-selection,.dashboard-stat-selection em { color: #fff; font-weight: 800; }', self.template)
 
     def test_mobile_safe_area_and_dialog_state_are_stable(self):
         self.assertIn(".topbar { position: fixed; right: 0; left: 0; }", self.template)
