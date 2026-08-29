@@ -399,7 +399,8 @@
   }
 
   function populateFixtureOptions() {
-    el("fixture-options").innerHTML = DATA.map(fixture => `<option value="${esc(`${teamName(fixture.home)} – ${teamName(fixture.away)}`)}"></option>`).join("");
+    const fixtures = window.AFTRAP_DATA || [];
+    el("fixture-options").innerHTML = fixtures.map(fixture => `<option value="${esc(`${fixture.home} – ${fixture.away}`)}"></option>`).join("");
   }
 
   document.addEventListener("DOMContentLoaded", async () => {

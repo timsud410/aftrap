@@ -81,6 +81,11 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("clv_percent", self.account_js)
         self.assertIn("AFTRAP_SETTLEMENTS", self.template)
 
+    def test_account_module_uses_explicit_shared_data(self):
+        self.assertIn("window.AFTRAP_DATA", self.account_js)
+        self.assertNotIn("DATA.map", self.account_js)
+        self.assertNotIn("teamName(fixture", self.account_js)
+
 
 if __name__ == "__main__":
     unittest.main()
