@@ -8,7 +8,7 @@
     low: { score: 2, label: "voorzichtig", bars: 1 },
     thin_data: { score: 1, label: "beperkte historie", bars: 1 },
   };
-  const state = { view: "tips", date: "all", league: "all", bookmaker: "best", minimumOdd: 1.30, expanded: false, detailMarket: null };
+  const state = { view: "tips", date: "all", league: "all", market: "all", bookmaker: "best", sort: "probability", minimumOdd: 1.30, expanded: false, detailMarket: null };
   const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
   const pct = value => Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 100)}%` : "—";
@@ -87,14 +87,18 @@
   }
 
   function rankedSelections() {
-    return filteredFixtures().flatMap(fixture => Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
+    const ranking = filteredFixtures().flatMap(fixture => Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
       if (key.endsWith("clean_sheet")) return [];
+      if (state.market !== "all" && marketGroup(key) !== state.market) return [];
       const probability = Number(rawProbability);
       const odd = selectedOdd(fixture, key);
       if (!odd || !Number.isFinite(probability) || Number(odd.o) < state.minimumOdd || (oddAge(odd) ?? 0) > 6) return [];
       const reference = odd.f == null ? 1 / Number(odd.o) : Number(odd.f);
       return [{ fixture, key, probability, odd, edge: probability - reference, verified: fixture.tips.some(tip => tip.raw === key) }];
-    })).sort((a, b) => b.probability - a.probability || b.edge - a.edge || Number(b.odd.o) - Number(a.odd.o));
+    }));
+    if (state.sort === "edge") return ranking.sort((a, b) => b.edge - a.edge || b.probability - a.probability || Number(b.odd.o) - Number(a.odd.o));
+    if (state.sort === "odds") return ranking.sort((a, b) => Number(b.odd.o) - Number(a.odd.o) || b.probability - a.probability || b.edge - a.edge);
+    return ranking.sort((a, b) => b.probability - a.probability || b.edge - a.edge || Number(b.odd.o) - Number(a.odd.o));
   }
 
   function modelReason(fixture, key, probability) {
@@ -182,10 +186,30 @@
   }
 
   function renderSummary() {
-    const leagues = new Set(DATA.map(f => f.league)).size;
-    document.getElementById("hero-summary").innerHTML = `<div class="hero-stat primary"><strong>${highlighted.length}</strong><span>uitgelichte wedstrijden</span></div><div class="hero-stat"><strong>${DATA.length}</strong><span>wedstrijden gecontroleerd</span></div><div class="hero-stat"><strong>${leagues}</strong><span>competities gevolgd</span></div>`;
     document.getElementById("tip-count").textContent = highlighted.length;
     document.getElementById("match-count").textContent = DATA.length;
+  }
+
+  function renderDashboardStats(ranking) {
+    const fixtures = filteredFixtures();
+    const leagues = new Set(fixtures.map(fixture => fixture.league)).size;
+    const topChance = [...ranking].sort((a, b) => b.probability - a.probability)[0];
+    const topEdge = [...ranking].sort((a, b) => b.edge - a.edge)[0];
+    const bookmakers = new Set(fixtures.flatMap(fixture => (fixture.odds || []).map(odd => odd.b)));
+    const freshOdds = fixtures.flatMap(fixture => fixture.odds || []).filter(odd => (state.bookmaker === "best" || odd.b === state.bookmaker) && (oddAge(odd) ?? 0) <= 6);
+    const latestTimestamp = freshOdds.reduce((latest, odd) => Math.max(latest, new Date(odd.u || 0).getTime() || 0), 0);
+    const minutesAgo = latestTimestamp ? Math.max(0, Math.round((Date.now() - latestTimestamp) / 60000)) : null;
+    const freshness = minutesAgo == null ? "Geen data" : minutesAgo < 60 ? `${minutesAgo} min` : `${Math.floor(minutesAgo / 60)}u ${minutesAgo % 60}m`;
+    const selectionName = item => item ? marketLabel(item.key, item.fixture) : "Geen selectie";
+    const cards = [
+      { label: "Wedstrijden", value: fixtures.length, detail: `${leagues} ${leagues === 1 ? "competitie" : "competities"}` },
+      { label: "Beschikbare kansen", value: ranking.length, detail: `vanaf @${oddText(state.minimumOdd)}` },
+      { label: "Hoogste modelkans", value: topChance ? pct(topChance.probability) : "—", detail: selectionName(topChance), primary: true },
+      { label: "Grootste voordeel", value: topEdge ? pp(topEdge.edge) : "—", detail: topEdge ? `${selectionName(topEdge)} · @${oddText(topEdge.odd.o)}` : "Geen actuele odd" },
+      { label: "Bookmakers", value: bookmakers.size, detail: state.bookmaker === "best" ? "beste odd gebruikt" : state.bookmaker },
+      { label: "Odds bijgewerkt", value: freshness, detail: `${freshOdds.length} actuele quotes` },
+    ];
+    document.getElementById("dashboard-stats").innerHTML = cards.map(card => `<article class="dashboard-stat ${card.primary ? "primary" : ""}"><span>${esc(card.label)}</span><strong>${esc(card.value)}</strong><small>${esc(card.detail)}</small></article>`).join("");
   }
 
   function renderFilters() {
@@ -207,6 +231,10 @@
     document.getElementById("chance-ranking").innerHTML = ranking.length ? visibleRanking.map(chanceRow).join("") : `<div class="empty">Geen actuele quoteringen vanaf @${minimum} voor deze filters.</div>`;
     document.getElementById("more-wrap").classList.toggle("hidden", state.expanded || ranking.length <= 12);
     document.getElementById("more-button").textContent = `Toon alle ${ranking.length} selecties`;
+    const sortDescriptions = { probability: "hoogste modelkans", edge: "grootste modelvoordeel", odds: "hoogste odd" };
+    const marketDescription = state.market === "all" ? "Alle actuele markten" : state.market;
+    document.getElementById("ranking-description").textContent = `${marketDescription}, gesorteerd op ${sortDescriptions[state.sort]}.`;
+    renderDashboardStats(ranking);
 
     const tips = filteredFixtures().filter(f => f.tips.length).map(fixture => ({ fixture, tip: bestTip(fixture) })).sort((a, b) => (BAND[b.tip.b]?.score || 0) - (BAND[a.tip.b]?.score || 0) || b.tip.p - a.tip.p || a.fixture.date.localeCompare(b.fixture.date));
     document.getElementById("pick-grid").innerHTML = tips.length ? tips.slice(0, 8).map(({ fixture, tip }, index) => pickCard(fixture, tip, index)).join("") : `<div class="empty">Voor deze filters zijn geen uitgelichte signaalwedstrijden gevonden.</div>`;
@@ -302,7 +330,9 @@
       if (add) addBetFromButton(add);
     });
     document.getElementById("league-select").addEventListener("change", event => { state.league = event.target.value; state.expanded = false; renderAll(); });
+    document.getElementById("market-select").addEventListener("change", event => { state.market = event.target.value; state.expanded = false; renderTips(); });
     document.getElementById("bookmaker-select").addEventListener("change", event => { state.bookmaker = event.target.value; renderAll(); });
+    document.getElementById("sort-select").addEventListener("change", event => { state.sort = event.target.value; state.expanded = false; renderTips(); });
     const minimumOdd = document.getElementById("minimum-odd");
     minimumOdd.addEventListener("input", event => {
       if (!/^\d+(?:[.,]\d{1,2})?$/.test(event.target.value.trim())) return;

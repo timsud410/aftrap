@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-4"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-5"',
+            'src="aftrap-app.js?v=20260829-6"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -90,6 +90,24 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("chance-reason", self.app_js)
         self.assertIn("Thuiswinst ${pct1(fixture.p_home)} + gelijk", self.app_js)
         self.assertIn("verwacht het model ${goalText(expected)} goals", self.app_js)
+
+    def test_mobile_dashboard_has_app_layout_and_live_statistics(self):
+        self.assertIn("viewport-fit=cover", self.template)
+        self.assertIn("overflow-x: hidden", self.template)
+        self.assertIn('id="dashboard-stats"', self.template)
+        self.assertIn("renderDashboardStats", self.app_js)
+        self.assertIn("Odds bijgewerkt", self.app_js)
+        self.assertNotIn("Zie direct waar het model wél iets ziet.</h1>", self.template)
+        self.assertNotIn('class="trust-strip"', self.template)
+
+    def test_ranking_has_market_and_sort_controls(self):
+        self.assertIn('id="market-select"', self.template)
+        self.assertIn('id="sort-select"', self.template)
+        self.assertIn('market: "all"', self.app_js)
+        self.assertIn('sort: "probability"', self.app_js)
+        self.assertIn('state.market !== "all"', self.app_js)
+        self.assertIn('state.sort === "edge"', self.app_js)
+        self.assertIn('state.sort === "odds"', self.app_js)
 
     def test_value_bet_and_auto_settlement_are_wired(self):
         self.assertIn("fairMarketProbability", self.app_js)

@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b1220">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -35,11 +35,11 @@
       --num: "DM Mono", ui-monospace, monospace;
     }
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+    html { width: 100%; max-width: 100%; overflow-x: hidden; scroll-behavior: smooth; background: var(--navy); }
+    body { width: 100%; max-width: 100%; min-height: 100vh; margin: 0; overflow-x: hidden; background: var(--navy); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
     button, select { font: inherit; }
     button { cursor: pointer; }
-    .topbar { position: sticky; top: 0; z-index: 30; background: rgba(11,18,32,.96); color: white; backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.08); }
+    .topbar { position: sticky; top: 0; z-index: 30; padding-top: env(safe-area-inset-top); background: rgba(11,18,32,.98); color: white; backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.08); }
     .topbar-inner { max-width: 1180px; min-height: 68px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
     .brand { display: flex; align-items: center; gap: 12px; }
     .brand-mark { width: 38px; height: 38px; display: block; border-radius: 11px; object-fit: cover; box-shadow: 0 4px 14px rgba(0,0,0,.22); }
@@ -49,36 +49,33 @@
     .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 4px rgba(183,243,107,.12); }
     .help-button { border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 8px 12px; background: transparent; color: white; font-size: 11px; font-weight: 800; }
     .help-button:hover { border-color: var(--lime); color: var(--lime); }
-    .shell { max-width: 1180px; margin: 0 auto; padding: 42px 24px 80px; }
-    .hero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0,1.5fr) minmax(320px,.8fr); gap: 40px; background: var(--navy); color: white; border-radius: 28px; padding: 46px 48px; box-shadow: var(--shadow); }
-    .hero::after { content: ""; position: absolute; width: 320px; height: 320px; right: -125px; top: -130px; border: 1px solid rgba(183,243,107,.28); border-radius: 50%; box-shadow: 0 0 0 42px rgba(183,243,107,.035),0 0 0 84px rgba(183,243,107,.025); }
-    .hero-copy, .hero-summary { position: relative; z-index: 1; }
-    .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; color: var(--lime); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-    .eyebrow::before { content: ""; width: 18px; height: 2px; background: currentColor; }
-    .hero h1 { max-width: 720px; margin: 0; font-size: clamp(35px,5vw,60px); line-height: 1.02; letter-spacing: -.06em; }
-    .hero-copy > p { max-width: 610px; margin: 20px 0 0; color: #bbc5d5; font-size: 16px; line-height: 1.7; }
-    .hero-note { margin-top: 24px; display: inline-flex; align-items: center; gap: 9px; color: #dde5ef; font-size: 12px; font-weight: 600; }
-    .hero-note span { color: var(--lime); font-size: 16px; }
-    .hero-summary { align-self: end; display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-    .hero-stat { min-height: 108px; padding: 18px; border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius); background: rgba(255,255,255,.055); }
-    .hero-stat.primary { background: var(--lime); color: var(--navy); border-color: var(--lime); }
-    .hero-stat strong { display: block; font-size: 32px; line-height: 1; letter-spacing: -.05em; }
-    .hero-stat span { display: block; margin-top: 9px; color: #aeb8c9; font-size: 12px; line-height: 1.35; }
-    .hero-stat.primary span { color: #3f5f1e; }
-    .workspace { margin-top: 34px; }
+    .shell { width: 100%; max-width: 1180px; min-height: calc(100vh - 68px); margin: 0 auto; padding: 24px 24px 80px; overflow: hidden; background: var(--ground); }
+    .dashboard-overview { display: grid; gap: 16px; }
+    .dashboard-title-row { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+    .dashboard-kicker { display: block; margin-bottom: 4px; color: #62813d; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .dashboard-title-row h1 { margin: 0; font-size: 28px; line-height: 1.08; letter-spacing: -.045em; }
+    .dashboard-title-row p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .dashboard-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .dashboard-stats { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 9px; }
+    .dashboard-stat { min-width: 0; min-height: 92px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+    .dashboard-stat.primary { border-color: #c8e8a1; background: var(--lime-soft); }
+    .dashboard-stat span { display: block; overflow: hidden; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .dashboard-stat strong { display: block; margin-top: 7px; overflow: hidden; font-family: var(--num); font-size: 20px; line-height: 1.05; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
+    .dashboard-stat.primary strong { color: #47751b; }
+    .dashboard-stat small { display: block; margin-top: 7px; overflow: hidden; color: #7b8492; font-size: 8px; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .workspace { margin-top: 18px; }
     .view-tabs { display: flex; gap: 6px; width: fit-content; padding: 5px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
     .view-tab { border: 0; border-radius: 9px; padding: 10px 16px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
     .view-tab.active { background: var(--navy); color: white; }
     .view-tab .count { margin-left: 6px; opacity: .62; }
-    .controls { margin: 18px 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
-    .date-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
-    .date-chips::-webkit-scrollbar { display: none; }
+    .controls { margin: 12px 0 20px; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.68); }
+    .date-chips { display: flex; flex-wrap: wrap; gap: 7px; min-width: 0; }
     .date-chip { flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; background: var(--paper); color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
     .date-chip.active { background: var(--lime-soft); border-color: #cceca7; color: #365c15; }
-    .select-filters { display: flex; gap: 9px; }
-    .league-select { min-width: 190px; border: 1px solid var(--line); border-radius: 11px; padding: 10px 36px 10px 13px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 700; }
-    .bookmaker-select { min-width: 210px; }
-    .minimum-odd-filter { min-width: 126px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 11px; padding: 5px 8px 5px 11px; background: var(--paper); }
+    .select-filters { display: grid; grid-template-columns: 126px repeat(2,minmax(150px,1fr)) minmax(180px,1.25fr) minmax(150px,1fr); gap: 8px; min-width: 0; }
+    .league-select { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 11px; padding: 10px 32px 10px 11px; background: var(--paper); color: var(--ink); font-size: 11px; font-weight: 700; }
+    .bookmaker-select { min-width: 0; }
+    .minimum-odd-filter { min-width: 0; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 11px; padding: 5px 8px 5px 11px; background: var(--paper); }
     .minimum-odd-filter span { color: var(--muted); font-size: 9px; font-weight: 800; white-space: nowrap; }
     .minimum-odd-filter input { width: 52px; border: 0; outline: 0; background: transparent; color: var(--ink); font-family: var(--num); font-size: 12px; font-weight: 700; text-align: right; }
     .section-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin: 30px 0 16px; }
@@ -187,12 +184,6 @@
     .more-wrap { display: flex; justify-content: center; margin-top: 22px; }
     .more-button { border: 1px solid var(--navy); border-radius: 999px; padding: 11px 18px; background: var(--paper); color: var(--navy); font-size: 12px; font-weight: 800; }
     .more-button:hover { background: var(--navy); color: white; }
-    .trust-strip { margin-top: 40px; display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-    .trust-item { padding: 19px; border-radius: var(--radius); background: #e9eeed; }
-    .trust-item b { display: block; font-size: 12px; }
-    .trust-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.5; }
-    footer { margin-top: 32px; display: flex; justify-content: space-between; gap: 20px; color: #848d9a; font-size: 10px; }
-    footer strong { color: #4f5967; }
     dialog { width: min(620px,calc(100% - 28px)); padding: 0; border: 0; border-radius: 24px; color: var(--ink); box-shadow: 0 30px 80px rgba(11,18,32,.3); }
     dialog::backdrop { background: rgba(5,10,19,.68); backdrop-filter: blur(5px); }
     .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 20px; padding: 26px 28px 20px; background: var(--navy); color: white; }
@@ -250,9 +241,8 @@
     .bet-model-context span { color: #59713e; font-size: 8px; }
     .bet-model-context b { display: block; margin-top: 2px; color: #294b0e; font-family: var(--num); font-size: 11px; }
     @media (max-width: 860px) {
-      .hero { grid-template-columns: 1fr; padding: 38px; }
-      .hero-summary { grid-template-columns: repeat(3,1fr); }
-      .hero-stat { min-height: 92px; }
+      .dashboard-stats { grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .select-filters { grid-template-columns: 126px repeat(2,minmax(0,1fr)); }
       .pick-grid { grid-template-columns: 1fr; }
       .chance-row { grid-template-columns: 34px minmax(160px,1.3fr) minmax(150px,1fr) 82px 88px; }
       .chance-open { display: none; }
@@ -263,22 +253,27 @@
     @media (max-width: 620px) {
       .brand-tagline,.top-meta > span:not(.live-dot) { display: none; }
       .topbar-inner { min-height: 60px; padding: 0 16px; }
-      .shell { padding: 20px 14px 56px; }
-      .hero { border-radius: 20px; padding: 28px 22px; }
-      .hero h1 { font-size: 38px; }
-      .hero-copy > p { font-size: 14px; }
-      .hero-summary { gap: 7px; }
-      .hero-stat { min-height: 84px; padding: 13px; }
-      .hero-stat strong { font-size: 26px; }
-      .hero-stat span { font-size: 9px; }
-      .workspace { margin-top: 22px; }
-      .view-tabs { width: 100%; }
-      .view-tab { flex: 1; padding: 10px 8px; }
-      .controls { align-items: stretch; flex-direction: column; gap: 10px; }
-      .select-filters { display: grid; grid-template-columns: 1fr; }
+      .shell { min-height: calc(100vh - 60px); padding: 15px 12px calc(94px + env(safe-area-inset-bottom)); }
+      .dashboard-title-row { align-items: start; }
+      .dashboard-title-row h1 { font-size: 24px; }
+      .dashboard-title-row p { max-width: 240px; font-size: 10px; }
+      .dashboard-status { display: none; }
+      .dashboard-stats { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+      .dashboard-stat { min-height: 78px; padding: 11px; }
+      .dashboard-stat strong { font-size: 18px; }
+      .dashboard-stat small { margin-top: 5px; font-size: 7px; }
+      .workspace { margin-top: 13px; }
+      .view-tabs { position: fixed; z-index: 35; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom)); left: 10px; width: auto; padding: 5px; border-color: rgba(255,255,255,.14); background: rgba(11,18,32,.97); box-shadow: 0 12px 40px rgba(11,18,32,.3); backdrop-filter: blur(16px); }
+      .view-tab { flex: 1; min-width: 0; padding: 10px 5px; color: #aeb8c9; font-size: 10px; white-space: nowrap; }
+      .view-tab.active { background: var(--lime); color: var(--navy); }
+      .controls { gap: 8px; margin-top: 0; padding: 9px; }
+      .date-chips { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .date-chip { overflow: hidden; padding: 8px 5px; text-overflow: ellipsis; }
+      .select-filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
       .league-select { width: 100%; }
       .minimum-odd-filter { width: 100%; justify-content: space-between; padding: 9px 12px; }
-      .minimum-odd-filter input { width: 80px; }
+      .minimum-odd-filter input { width: 46px; }
+      .bookmaker-select { grid-column: 1 / -1; }
       .section-head { align-items: start; flex-direction: column; gap: 8px; }
       .chance-row { grid-template-columns: 30px minmax(0,1fr) 68px; gap: 8px; padding: 11px 9px; }
       .chance-selection { grid-column: 2 / -1; grid-row: 2; }
@@ -302,8 +297,6 @@
       .odds-compare-row { grid-template-columns: minmax(100px,1fr) repeat(2,60px); }
       .odds-compare-row > div:nth-child(4) { display: none; }
       .odds-compare-row .odd-pill { grid-column: 1/-1; }
-      .trust-strip { grid-template-columns: 1fr; }
-      footer { flex-direction: column; }
     }
   </style>
 </head>
@@ -328,14 +321,16 @@
     </div>
   </header>
   <main class="shell">
-    <section class="hero">
-      <div class="hero-copy">
-        <div class="eyebrow">Programma __MATCHDAY__</div>
-        <h1>Zie direct waar het model wél iets ziet.</h1>
-        <p>Geen eindeloze lijst met voorspellingen. Aftrap controleert iedere wedstrijd en toont alleen de selecties waarvoor de historische signalen sterk genoeg zijn.</p>
-        <div class="hero-note"><span>●</span> Modelkans is geen bookmakerquotering of inzetadvies</div>
+    <section class="dashboard-overview" aria-label="Actueel overzicht">
+      <div class="dashboard-title-row">
+        <div>
+          <span class="dashboard-kicker">Programma __MATCHDAY__</span>
+          <h1>Overzicht</h1>
+          <p>Modelkansen, actuele odds en jullie resultaten.</p>
+        </div>
+        <div class="dashboard-status"><span class="live-dot"></span><span>Bijgewerkt __GENERATED__</span></div>
       </div>
-      <div class="hero-summary" id="hero-summary"></div>
+      <div class="dashboard-stats" id="dashboard-stats"></div>
     </section>
     <section class="workspace" aria-label="Voetbaltips">
       <nav class="view-tabs" aria-label="Weergave">
@@ -343,9 +338,18 @@
         <button class="view-tab" data-view="matches">Alle wedstrijden <span class="count" id="match-count"></span></button>
         <button class="view-tab" data-view="bets">Onze bets</button>
       </nav>
-      <div class="controls"><div class="date-chips" id="date-chips" aria-label="Filter op datum"></div><div class="select-filters"><label class="minimum-odd-filter"><span>Minimum odd</span><input id="minimum-odd" inputmode="decimal" value="1,30" aria-label="Minimum odd"></label><select class="league-select" id="league-select" aria-label="Filter op competitie"></select><select class="league-select bookmaker-select" id="bookmaker-select" aria-label="Kies bookmaker"></select></div></div>
+      <div class="controls">
+        <div class="date-chips" id="date-chips" aria-label="Filter op datum"></div>
+        <div class="select-filters">
+          <label class="minimum-odd-filter"><span>Minimum odd</span><input id="minimum-odd" inputmode="decimal" value="1,30" aria-label="Minimum odd"></label>
+          <select class="league-select" id="league-select" aria-label="Filter op competitie"></select>
+          <select class="league-select" id="market-select" aria-label="Filter op markt"><option value="all">Alle markten</option><option value="Fulltime">Fulltime</option><option value="Totaal goals">Totaal goals</option><option value="BTTS">BTTS</option><option value="Team goals">Team goals</option><option value="Eerste helft">Eerste helft</option></select>
+          <select class="league-select bookmaker-select" id="bookmaker-select" aria-label="Kies bookmaker"></select>
+          <select class="league-select sort-select" id="sort-select" aria-label="Sorteer selecties"><option value="probability">Hoogste modelkans</option><option value="edge">Grootste modelvoordeel</option><option value="odds">Hoogste odd</option></select>
+        </div>
+      </div>
       <section id="tips-view">
-        <div class="section-head"><div><h2>Beste kansen boven je minimum odd</h2><p>Alle actuele, gecontroleerde markten; automatisch gesorteerd op hoogste modelkans.</p></div><div class="result-count" id="tip-result-count"></div></div>
+        <div class="section-head"><div><h2>Beste kansen boven je minimum odd</h2><p id="ranking-description">Alle actuele markten, gesorteerd op hoogste modelkans.</p></div><div class="result-count" id="tip-result-count"></div></div>
         <div class="chance-ranking" id="chance-ranking"></div><div class="more-wrap hidden" id="more-wrap"><button class="more-button" id="more-button">Toon alle selecties</button></div>
         <div class="section-head signal-section-head"><div><h2>Uitgelichte signaalwedstrijden</h2><p>Drie modeltips per wedstrijd: hoofdselectie, fulltime en BTTS.</p></div></div>
         <div class="pick-grid" id="pick-grid"></div>
@@ -386,12 +390,6 @@
         </div>
       </section>
     </section>
-    <section class="trust-strip" aria-label="Betrouwbaarheid">
-      <div class="trust-item"><b>Alleen eerdere wedstrijden</b><span>Het model gebruikt geen uitslagen of informatie uit de toekomst.</span></div>
-      <div class="trust-item"><b>Signalen moeten zich bewijzen</b><span>Een selectie verschijnt pas na toetsing op historische speeldagen.</span></div>
-      <div class="trust-item"><b>Geen tip is óók een uitkomst</b><span>Bij onvoldoende bewijs wordt een wedstrijd bewust overgeslagen.</span></div>
-    </section>
-    <footer><span><strong>Aftrap</strong> · transparante voetbalanalyse</span><span>Geen financieel of weddenschapsadvies</span></footer>
   </main>
   <dialog id="help-dialog">
     <div class="dialog-head"><div><small>Aftrap in één minuut</small><h2>Zo lees je de selecties</h2></div><button class="dialog-close" id="close-help" aria-label="Sluiten">×</button></div>
@@ -476,7 +474,7 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
-  <script src="aftrap-app.js?v=20260829-5"></script>
+  <script src="aftrap-app.js?v=20260829-6"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260829-4"></script>
 </body>
