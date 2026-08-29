@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import sys
 import unicodedata
@@ -104,6 +105,152 @@ def _normalise(name: str) -> str:
     keep = "".join(c.lower() if c.isalnum() else " " for c in text)
     words = [w for w in keep.split() if w not in {"fc", "afc", "cf", "calcio"}]
     return " ".join(words)
+
+
+def canonical_odd_selection(bet_name: str, outcome_name: str) -> str | None:
+    """Vertaal gangbare pre-match API-markten naar onze modelselecties."""
+    bet = _normalise(bet_name)
+    outcome = _normalise(outcome_name)
+    first_half = "first half" in bet or "1st half" in bet
+
+    if "both teams" in bet and ("score" in bet or "to score" in bet):
+        if outcome in {"yes", "no"}:
+            return f"btts_{outcome}"
+
+    if "winner" in bet or bet in {"match result", "1x2"}:
+        result = {"home": "home", "draw": "draw", "away": "away"}.get(outcome)
+        if result:
+            return f"fh_{result}" if first_half else result
+
+    if "double chance" in bet:
+        compact = outcome.replace(" ", "")
+        if compact in {"homedraw", "1x", "homeordraw"}:
+            return "home_or_draw"
+        if compact in {"drawaway", "x2", "awayordraw"}:
+            return "away_or_draw"
+
+    if "over under" in bet or "total goals" in bet:
+        match = re.match(r"\s*(over|under)\s+([0-9]+(?:[.,][0-9]+)?)", outcome_name.lower())
+        if match:
+            kind, raw_line = match.groups()
+            line = str(float(raw_line.replace(",", "."))).rstrip("0").rstrip(".")
+            key = f"{kind}_{line}"
+            if "home" in bet or "team 1" in bet:
+                return f"home_{key}"
+            if "away" in bet or "team 2" in bet:
+                return f"away_{key}"
+            return f"fh_{key}" if first_half else key
+    return None
+
+
+def _upcoming_api_fixtures(
+    conn: sqlite3.Connection,
+    start: date,
+    horizon_days: int,
+) -> list[sqlite3.Row]:
+    end = start + timedelta(days=horizon_days)
+    return conn.execute(
+        """SELECT f.id fixture_id, x.external_id
+           FROM fixtures f
+           JOIN fixture_external_ids x ON x.fixture_id=f.id
+             AND x.source='api_football'
+           WHERE f.match_date BETWEEN ? AND ?
+             AND f.home_goals IS NULL AND f.away_goals IS NULL
+             AND f.status IN ('NS', 'TBD')
+           ORDER BY f.match_date, f.kickoff""",
+        (start.isoformat(), end.isoformat()),
+    ).fetchall()
+
+
+def _store_fixture_odds(
+    conn: sqlite3.Connection,
+    fixture_id: int,
+    responses: list[dict],
+) -> tuple[int, set[str]]:
+    """Vervang één complete odds-snapshot nadat alle pagina's zijn ontvangen."""
+    fetched_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    rows: list[tuple] = []
+    bookmakers: set[str] = set()
+    for response in responses:
+        updated = response.get("update")
+        for bookmaker in response.get("bookmakers") or []:
+            bookmaker_id = bookmaker.get("id")
+            bookmaker_name = str(bookmaker.get("name") or "").strip()
+            if bookmaker_id is None or not bookmaker_name:
+                continue
+            bookmakers.add(bookmaker_name)
+            for bet in bookmaker.get("bets") or []:
+                bet_id = bet.get("id")
+                bet_name = str(bet.get("name") or "").strip()
+                if bet_id is None or not bet_name:
+                    continue
+                for value in bet.get("values") or []:
+                    outcome = str(value.get("value") or "").strip()
+                    try:
+                        odd = float(value.get("odd"))
+                    except (TypeError, ValueError):
+                        continue
+                    if not outcome or odd <= 1:
+                        continue
+                    rows.append((
+                        fixture_id, int(bookmaker_id), bookmaker_name, int(bet_id),
+                        bet_name, outcome,
+                        canonical_odd_selection(bet_name, outcome), odd,
+                        updated, fetched_at,
+                    ))
+
+    conn.execute("DELETE FROM fixture_odds WHERE fixture_id=?", (fixture_id,))
+    conn.executemany(
+        """INSERT INTO fixture_odds
+           (fixture_id, bookmaker_id, bookmaker_name, bet_id, bet_name,
+            outcome_name, selection_key, odd, source_updated, fetched_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        rows,
+    )
+    return len(rows), bookmakers
+
+
+def load_pre_match_odds(
+    conn: sqlite3.Connection,
+    api_key: str,
+    start: date | None = None,
+    horizon_days: int = DEFAULT_HORIZON_DAYS,
+) -> dict:
+    """Laad alle pagina's met pre-match odds voor komende fixtures."""
+    start = start or date.today()
+    fixtures = _upcoming_api_fixtures(conn, start, horizon_days)
+    rows = calls = failures = with_odds = 0
+    bookmakers: set[str] = set()
+    for fixture in fixtures:
+        responses: list[dict] = []
+        page = 1
+        try:
+            while True:
+                payload = api_get(
+                    "odds",
+                    {"fixture": fixture["external_id"], "page": page},
+                    api_key,
+                )
+                calls += 1
+                responses.extend(payload["response"])
+                paging = payload.get("paging") or {}
+                if page >= int(paging.get("total") or 1):
+                    break
+                page += 1
+        except RuntimeError:
+            failures += 1
+            continue
+        stored, names = _store_fixture_odds(
+            conn, int(fixture["fixture_id"]), responses
+        )
+        rows += stored
+        bookmakers.update(names)
+        with_odds += int(stored > 0)
+    conn.commit()
+    return {
+        "fixtures": len(fixtures), "with_odds": with_odds, "rows": rows,
+        "bookmakers": len(bookmakers), "calls": calls, "failures": failures,
+    }
 
 
 def resolve_team(

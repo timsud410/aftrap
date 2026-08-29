@@ -83,6 +83,7 @@ def main() -> int:
         conn = store.connect(load_fdcouk.DEFAULT_DB)
         try:
             result = load_api_football.load_upcoming(conn, api_key)
+            odds_result = load_api_football.load_pre_match_odds(conn, api_key)
             player_result = load_api_football.load_recent_player_stats(conn, api_key)
         finally:
             conn.close()
@@ -100,6 +101,13 @@ def main() -> int:
             f"{player_result['player_rows']} spelerregels "
             f"({player_result['cached']} uit cache)."
         )
+        print(
+            f"  Odds: {odds_result['with_odds']}/{odds_result['fixtures']} wedstrijden, "
+            f"{odds_result['bookmakers']} bookmakers, {odds_result['rows']} quoteringen "
+            f"({odds_result['calls']} API-calls)."
+        )
+        if odds_result["failures"]:
+            print(f"  Let op: odds ophalen mislukte voor {odds_result['failures']} wedstrijden.")
         if player_result["team_failures"] or player_result["fixture_failures"]:
             print(
                 "  Let op: spelersdata ontbrak voor "

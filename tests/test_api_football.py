@@ -9,6 +9,8 @@ import db as store
 from load_api_football import (
     TEAM_NAME_ALIASES,
     _store_player_fixture,
+    canonical_odd_selection,
+    load_pre_match_odds,
     load_recent_player_stats,
     resolve_team,
     store_fixture,
@@ -104,6 +106,62 @@ class ApiFootballStorageTests(unittest.TestCase):
             pick_upcoming_dates(self.conn, date(2026, 9, 1), horizon_days=7),
             [],
         )
+
+    def test_api_markets_map_to_model_selections(self):
+        self.assertEqual(canonical_odd_selection("Match Winner", "Home"), "home")
+        self.assertEqual(canonical_odd_selection("Both Teams Score", "Yes"), "btts_yes")
+        self.assertEqual(canonical_odd_selection("Double Chance", "Home/Draw"), "home_or_draw")
+        self.assertEqual(canonical_odd_selection("Goals Over/Under", "Over 2.5"), "over_2.5")
+        self.assertEqual(
+            canonical_odd_selection("Goals Over/Under - First Half", "Under 1.5"),
+            "fh_under_1.5",
+        )
+
+    def test_odds_loader_stores_bookmakers_and_replaces_snapshot(self):
+        fixture_id, _, _ = store_fixture(self.conn, "EPL", FIXTURE)
+        self.conn.commit()
+        response = {
+            "response": [{
+                "fixture": {"id": 123456},
+                "update": "2026-09-01T08:00:00+00:00",
+                "bookmakers": [{
+                    "id": 8, "name": "TestBet", "bets": [{
+                        "id": 1, "name": "Match Winner", "values": [
+                            {"value": "Home", "odd": "1.95"},
+                            {"value": "Draw", "odd": "3.40"},
+                            {"value": "Away", "odd": "4.10"},
+                        ],
+                    }],
+                }],
+            }],
+            "paging": {"current": 1, "total": 1},
+        }
+        with patch("load_api_football.api_get", return_value=response) as api:
+            result = load_pre_match_odds(
+                self.conn, "secret", date(2026, 9, 1), horizon_days=7
+            )
+        self.assertEqual(api.call_count, 1)
+        self.assertEqual(result["with_odds"], 1)
+        self.assertEqual(result["bookmakers"], 1)
+        self.assertEqual(result["rows"], 3)
+        row = self.conn.execute(
+            """SELECT bookmaker_name, selection_key, odd FROM fixture_odds
+               WHERE fixture_id=? AND selection_key='home'""",
+            (fixture_id,),
+        ).fetchone()
+        self.assertEqual((row["bookmaker_name"], row["selection_key"], row["odd"]),
+                         ("TestBet", "home", 1.95))
+
+        empty = {"response": [], "paging": {"current": 1, "total": 1}}
+        with patch("load_api_football.api_get", return_value=empty):
+            result = load_pre_match_odds(
+                self.conn, "secret", date(2026, 9, 1), horizon_days=7
+            )
+        self.assertEqual(result["rows"], 0)
+        count = self.conn.execute(
+            "SELECT COUNT(*) n FROM fixture_odds WHERE fixture_id=?", (fixture_id,)
+        ).fetchone()["n"]
+        self.assertEqual(count, 0)
 
     def test_player_shots_are_stored_and_summarised_over_last_five_appearances(self):
         store_fixture(self.conn, "EPL", FIXTURE)

@@ -142,6 +142,25 @@ CREATE TABLE IF NOT EXISTS closing_odds (
     bookmaker  TEXT NOT NULL     -- 'pinnacle_closing' | 'market_avg_closing'
 );
 
+-- Actuele pre-match quoteringen uit API-Football. Ruwe markt- en uitkomstnamen
+-- blijven bewaard voor controle; selection_key koppelt ze aan onze modelmarkten.
+CREATE TABLE IF NOT EXISTS fixture_odds (
+    fixture_id      INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
+    bookmaker_id   INTEGER NOT NULL,
+    bookmaker_name TEXT NOT NULL,
+    bet_id          INTEGER NOT NULL,
+    bet_name        TEXT NOT NULL,
+    outcome_name    TEXT NOT NULL,
+    selection_key   TEXT,
+    odd             REAL NOT NULL,
+    source_updated  TEXT,
+    fetched_at      TEXT NOT NULL,
+    PRIMARY KEY (fixture_id, bookmaker_id, bet_id, outcome_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fixture_odds_fixture_selection
+ON fixture_odds (fixture_id, selection_key);
+
 CREATE TABLE IF NOT EXISTS load_runs (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     source      TEXT NOT NULL,

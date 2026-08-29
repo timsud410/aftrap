@@ -494,6 +494,15 @@ def build_day(
             for player in player_shot_form(conn, team_id, cutoff):
                 players.append({**player, "team": team_name})
 
+        odds = [dict(row) for row in conn.execute(
+            """SELECT bookmaker_id, bookmaker_name, bet_name, outcome_name,
+                      selection_key, odd, source_updated
+               FROM fixture_odds
+               WHERE fixture_id=? AND selection_key IS NOT NULL
+               ORDER BY bookmaker_name, selection_key, odd DESC""",
+            (int(f["id"]),),
+        )]
+
         out.append({
             "league": f["league"], "league_code": f["league_code"],
             "date": target,
@@ -508,6 +517,7 @@ def build_day(
             "quality": round(quality, 2), "xg_source": source,
             "score": f"{hg}-{ag}" if played else None,
             "players": players,
+            "odds": odds,
             "tips": [{
                 "s": label(t.selection, f["home"], f["away"]),
                 "raw": t.selection, "m": t.market, "p": round(t.model_prob, 3),

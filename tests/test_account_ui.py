@@ -56,6 +56,13 @@ class AccountUiTests(unittest.TestCase):
         ):
             self.assertTrue((ROOT / "assets" / asset).is_file(), asset)
 
+    def test_bookmaker_filter_and_odds_value_are_wired(self):
+        self.assertIn('id="bookmaker-select"', self.template)
+        self.assertIn("Beste beschikbare odd", self.template)
+        self.assertIn("selectedOdd", self.template)
+        self.assertIn("Break-even", self.template)
+        self.assertIn("fixture.odds", self.template)
+
 
 if __name__ == "__main__":
     unittest.main()
