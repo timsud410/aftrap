@@ -555,18 +555,23 @@ def data_quality_score(
     """
     q = 1.0
 
-    # effectieve wedstrijden na tijdsweging; onder de 10 wordt het dun
+    # Weinig waarnemingen is de scherpe straf: een net gepromoveerde ploeg
+    # met drie duels op dit niveau is echt onbekend terrein.
     thin = min(effective_matches_home, effective_matches_away)
     if thin < 10.0:
         q *= max(0.35, thin / 10.0)
 
-    # Eredivisie draait v1 op een schoten-op-doel-proxy
+    # De bron weegt bewust MILD mee. Een schoten-op-doel-proxy over zestien
+    # seizoenen is een schatting, geen gebrek aan data -- dat onderscheid ging
+    # in de eerste versie verloren, waardoor elke tip het label "weinig data"
+    # kreeg en het hoogste betrouwbaarheidsniveau onbereikbaar was. Dat de
+    # maat een benadering is, staat al zichtbaar op de kaart zelf.
     q *= {
         "understat": 1.0,
-        "api_football": 0.95,
-        "own_model": 0.80,
-        "sot_proxy": 0.65,
-    }.get(xg_source, 0.5)
+        "api_football": 0.97,
+        "own_model": 0.90,
+        "sot_proxy": 0.85,
+    }.get(xg_source, 0.6)
 
     # vroeg in het seizoen weet niemand iets
     if matchday is not None and matchday <= 5:
@@ -576,12 +581,22 @@ def data_quality_score(
 
 
 def confidence_band(model_prob: float, data_quality: float) -> str:
-    """Vertaalt kans plus datakwaliteit naar een label voor de UI."""
-    if data_quality < 0.5:
+    """Vertaalt kans plus datakwaliteit naar een label voor de UI.
+
+    De drempels zijn afgestemd op de bron die je werkelijk hebt. Met de oude
+    waarden (hoog vanaf kwaliteit 0.85) was "hoog" onbereikbaar zolang het
+    model op een proxy draait, en zag elke tip er even zwak uit -- ook die met
+    zestien seizoenen eronder. Dat is geen voorzichtigheid maar ruis: als
+    alles zwak heet, zegt het label niets meer.
+
+    "thin_data" is nu voorbehouden aan wat het woord belooft: te weinig
+    waarnemingen, in de praktijk promovendi vroeg in het seizoen.
+    """
+    if data_quality < 0.45:
         return "thin_data"
     edge = abs(model_prob - 0.5)
-    if edge > 0.20 and data_quality > 0.85:
+    if edge > 0.20 and data_quality > 0.80:
         return "high"
-    if edge > 0.12 and data_quality > 0.70:
+    if edge > 0.12 and data_quality > 0.62:
         return "medium"
     return "low"
