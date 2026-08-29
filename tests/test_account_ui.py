@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-5"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-14"',
+            'src="aftrap-app.js?v=20260829-15"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -76,11 +76,9 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn('=== "bet365"', self.app_js)
         self.assertIn('select.value = state.bookmaker', self.app_js)
 
-    def test_programme_opens_on_today_or_next_matchday(self):
-        self.assertIn('date: "auto"', self.app_js)
-        self.assertIn("defaultProgrammeDate", self.app_js)
-        self.assertIn("dates.includes(today) ? today", self.app_js)
-        self.assertIn("dates.find(day => day > today)", self.app_js)
+    def test_programme_opens_on_all_matchdays(self):
+        self.assertIn('date: "all"', self.app_js)
+        self.assertNotIn("defaultProgrammeDate", self.app_js)
         self.assertIn('state.date === day ? "active"', self.app_js)
 
     def test_minimum_odd_ranking_is_wired(self):

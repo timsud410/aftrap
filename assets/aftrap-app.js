@@ -20,7 +20,7 @@
     { label: "BTTS value", empty: "BTTS", minProbability: 0.48, maxOdd: 2.50, matches: key => ["btts_yes", "btts_no"].includes(key) },
   ];
   const PAGE_SIZE = 20;
-  const state = { view: "tips", date: "auto", league: "all", market: "all", bookmaker: "auto", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
+  const state = { view: "tips", date: "all", league: "all", market: "all", bookmaker: "auto", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
   const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
   const pct = value => Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 100)}%` : "—";
@@ -33,11 +33,6 @@
   const teamName = value => TEAM_DISPLAY[value] || value;
   const displayText = value => Object.entries(TEAM_DISPLAY).reduce((text, [raw, nice]) => text.replaceAll(raw, nice), String(value));
   const dateObj = value => new Date(`${value}T12:00:00`);
-  const localDateKey = value => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-  const defaultProgrammeDate = dates => {
-    const today = localDateKey(new Date());
-    return dates.includes(today) ? today : dates.find(day => day > today) || dates[0] || "all";
-  };
   const shortDate = value => new Intl.DateTimeFormat("nl-NL", { weekday: "short", day: "numeric", month: "short" }).format(dateObj(value));
   const longDate = value => new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long" }).format(dateObj(value));
   const relativeDate = value => {
@@ -332,7 +327,6 @@
 
   function renderFilters() {
     const dates = [...new Set(DATA.map(f => f.date))].sort();
-    if (state.date === "auto") state.date = defaultProgrammeDate(dates);
     document.getElementById("date-chips").innerHTML = [`<button class="date-chip ${state.date === "all" ? "active" : ""}" data-date="all">Alle dagen</button>`, ...dates.map(day => `<button class="date-chip ${state.date === day ? "active" : ""}" data-date="${esc(day)}">${esc(relativeDate(day))}</button>`)].join("");
     const leagues = [...new Set(DATA.map(f => f.league))].sort();
     document.getElementById("league-select").innerHTML = `<option value="all">Alle competities</option>${leagues.map(league => `<option value="${esc(league)}">${esc(league)}</option>`).join("")}`;
