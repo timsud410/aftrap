@@ -17,6 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import db as store
 from load_fdcouk import DEFAULT_DB, current_season_start
@@ -24,6 +25,9 @@ from load_fdcouk import DEFAULT_DB, current_season_start
 BASE_URL = "https://v3.football.api-sports.io"
 SOURCE = "api_football"
 DEFAULT_HORIZON_DAYS = 8
+PLAYER_FORM_APPEARANCES = 5
+PLAYER_FORM_FIXTURES = 8
+PLAYER_FIXTURE_BATCH = 20
 
 # Alleen bewezen naamverschillen worden handmatig gekoppeld. Alle overige
 # namen gaan door een unieke genormaliseerde match; bij twijfel ontstaat een
@@ -273,6 +277,194 @@ def load_upcoming(
         "new_teams": sorted(set(new_teams)),
         "from": start.isoformat(),
         "to": end.isoformat(),
+    }
+
+
+def _upcoming_api_teams(
+    conn: sqlite3.Connection,
+    start: date,
+    horizon_days: int,
+) -> list[sqlite3.Row]:
+    """API-team-ID's die daadwerkelijk in de komende periode voorkomen."""
+    end = start + timedelta(days=horizon_days)
+    return conn.execute(
+        """SELECT DISTINCT t.id team_id, t.name, a.alias api_team_id
+           FROM (
+             SELECT home_team_id team_id FROM fixtures
+              WHERE match_date BETWEEN ? AND ? AND home_goals IS NULL
+                AND status IN ('NS', 'TBD')
+             UNION
+             SELECT away_team_id team_id FROM fixtures
+              WHERE match_date BETWEEN ? AND ? AND away_goals IS NULL
+                AND status IN ('NS', 'TBD')
+           ) upcoming
+           JOIN teams t ON t.id = upcoming.team_id
+           JOIN team_aliases a ON a.team_id = t.id
+             AND a.source = 'api_football'
+           ORDER BY t.name""",
+        (start.isoformat(), end.isoformat(), start.isoformat(), end.isoformat()),
+    ).fetchall()
+
+
+def _store_player_fixture(conn: sqlite3.Connection, item: dict) -> int:
+    """Bewaar individuele schotcijfers uit één afgeronde API-fixture."""
+    fixture = item.get("fixture") or {}
+    external_fixture_id = str(fixture.get("id") or "")
+    fixture_date = str(fixture.get("date") or "")[:10]
+    if not external_fixture_id or len(fixture_date) != 10:
+        return 0
+
+    stored = 0
+    for team_block in item.get("players") or []:
+        api_team = team_block.get("team") or {}
+        mapping = conn.execute(
+            """SELECT team_id FROM team_aliases
+               WHERE source = 'api_football' AND alias = ?""",
+            (str(api_team.get("id") or ""),),
+        ).fetchone()
+        if not mapping:
+            continue
+        team_id = int(mapping["team_id"])
+        for entry in team_block.get("players") or []:
+            player = entry.get("player") or {}
+            external_player_id = str(player.get("id") or "")
+            name = str(player.get("name") or "").strip()
+            stats = (entry.get("statistics") or [{}])[0] or {}
+            if not external_player_id or not name:
+                continue
+            conn.execute(
+                """INSERT INTO players (source, external_id, name, photo)
+                   VALUES ('api_football', ?, ?, ?)
+                   ON CONFLICT(source, external_id) DO UPDATE SET
+                     name=excluded.name, photo=excluded.photo""",
+                (external_player_id, name, player.get("photo")),
+            )
+            player_row = conn.execute(
+                """SELECT id FROM players
+                   WHERE source='api_football' AND external_id=?""",
+                (external_player_id,),
+            ).fetchone()
+            games = stats.get("games") or {}
+            shots = stats.get("shots") or {}
+            conn.execute(
+                """INSERT INTO player_match_stats
+                   (source, external_fixture_id, match_date, team_id, player_id,
+                    minutes, shots, shots_on_target)
+                   VALUES ('api_football', ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(source, external_fixture_id, player_id) DO UPDATE SET
+                     match_date=excluded.match_date,
+                     team_id=excluded.team_id,
+                     minutes=excluded.minutes,
+                     shots=excluded.shots,
+                     shots_on_target=excluded.shots_on_target""",
+                (
+                    external_fixture_id,
+                    fixture_date,
+                    team_id,
+                    int(player_row["id"]),
+                    games.get("minutes"),
+                    shots.get("total"),
+                    shots.get("on"),
+                ),
+            )
+            stored += 1
+    return stored
+
+
+def load_recent_player_stats(
+    conn: sqlite3.Connection,
+    api_key: str,
+    start: date | None = None,
+    horizon_days: int = DEFAULT_HORIZON_DAYS,
+    recent_fixtures: int = PLAYER_FORM_FIXTURES,
+    cache_dir: str | Path | None = None,
+) -> dict:
+    """Laad recente individuele schotcijfers voor teams in de vooruitblik.
+
+    Afgeronde fixture-details worden op schijf gecachet: die veranderen niet
+    meer en kosten daardoor na de eerste run geen nieuwe API-call.
+    """
+    start = start or date.today()
+    cache = Path(cache_dir) if cache_dir else Path(DEFAULT_DB).parent / "api_football" / "players"
+    cache.mkdir(parents=True, exist_ok=True)
+    teams = _upcoming_api_teams(conn, start, horizon_days)
+    fixtures: dict[str, dict] = {}
+    team_failures = 0
+    for team in teams:
+        try:
+            payload = api_get(
+                "fixtures",
+                {
+                    "team": team["api_team_id"],
+                    "last": recent_fixtures,
+                    "status": "FT-AET-PEN",
+                    "timezone": "Europe/Amsterdam",
+                },
+                api_key,
+            )
+        except RuntimeError:
+            team_failures += 1
+            continue
+        for item in payload["response"]:
+            fixture = item.get("fixture") or {}
+            if fixture.get("id") and str(fixture.get("date") or "")[:10] < start.isoformat():
+                fixtures[str(fixture["id"])] = item
+
+    cached = fetched = fixture_failures = player_rows = 0
+    missing: list[str] = []
+    for fixture_id in sorted(fixtures, key=int):
+        path = cache / f"{fixture_id}.json"
+        if path.exists():
+            try:
+                item = json.loads(path.read_text(encoding="utf-8"))
+                player_rows += _store_player_fixture(conn, item)
+                cached += 1
+                continue
+            except (OSError, json.JSONDecodeError, TypeError):
+                pass
+        missing.append(fixture_id)
+
+    for offset in range(0, len(missing), PLAYER_FIXTURE_BATCH):
+        batch = missing[offset:offset + PLAYER_FIXTURE_BATCH]
+        try:
+            payload = api_get("fixtures", {"ids": "-".join(batch)}, api_key)
+            returned = {
+                str((item.get("fixture") or {}).get("id")): item
+                for item in payload["response"]
+            }
+        except RuntimeError:
+            returned = {}
+        for fixture_id in batch:
+            item = returned.get(fixture_id) or fixtures[fixture_id]
+            if not item.get("players"):
+                try:
+                    player_payload = api_get(
+                        "fixtures/players", {"fixture": fixture_id}, api_key
+                    )
+                    item = dict(item)
+                    item["players"] = player_payload["response"]
+                except RuntimeError:
+                    fixture_failures += 1
+                    continue
+            try:
+                (cache / f"{fixture_id}.json").write_text(
+                    json.dumps(item, ensure_ascii=False, separators=(",", ":")),
+                    encoding="utf-8",
+                )
+                player_rows += _store_player_fixture(conn, item)
+                fetched += 1
+            except (OSError, TypeError):
+                fixture_failures += 1
+
+    conn.commit()
+    return {
+        "teams": len(teams),
+        "fixtures": len(fixtures),
+        "cached": cached,
+        "fetched": fetched,
+        "player_rows": player_rows,
+        "team_failures": team_failures,
+        "fixture_failures": fixture_failures,
     }
 
 

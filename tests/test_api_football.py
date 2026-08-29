@@ -3,10 +3,17 @@ import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 import db as store
-from load_api_football import TEAM_NAME_ALIASES, resolve_team, store_fixture
-from run_tips import pick_upcoming_dates
+from load_api_football import (
+    TEAM_NAME_ALIASES,
+    _store_player_fixture,
+    load_recent_player_stats,
+    resolve_team,
+    store_fixture,
+)
+from run_tips import pick_upcoming_dates, player_shot_form
 
 
 FIXTURE = {
@@ -97,6 +104,91 @@ class ApiFootballStorageTests(unittest.TestCase):
             pick_upcoming_dates(self.conn, date(2026, 9, 1), horizon_days=7),
             [],
         )
+
+    def test_player_shots_are_stored_and_summarised_over_last_five_appearances(self):
+        store_fixture(self.conn, "EPL", FIXTURE)
+        team_id = self.conn.execute(
+            "SELECT id FROM teams WHERE league_code='EPL' AND name='Man City'"
+        ).fetchone()["id"]
+        for index, shots_on in enumerate((0, 1, 2, 1, 3, 4), start=1):
+            item = {
+                "fixture": {
+                    "id": 900000 + index,
+                    "date": f"2026-08-{20 + index:02d}T15:00:00+02:00",
+                },
+                "players": [{
+                    "team": {"id": 50, "name": "Manchester City"},
+                    "players": [{
+                        "player": {"id": 777, "name": "Test Spits", "photo": None},
+                        "statistics": [{
+                            "games": {"minutes": 80},
+                            "shots": {"total": shots_on + 2, "on": shots_on},
+                        }],
+                    }],
+                }],
+            }
+            self.assertEqual(_store_player_fixture(self.conn, item), 1)
+        self.conn.commit()
+
+        form = player_shot_form(
+            self.conn, int(team_id), "2026-08-29", appearances=5
+        )
+        self.assertEqual(len(form), 1)
+        self.assertEqual(form[0]["name"], "Test Spits")
+        self.assertEqual(form[0]["n"], 5)
+        self.assertEqual(form[0]["sot_avg"], 2.2)
+        self.assertEqual(form[0]["sot_hits"], 5)
+        self.assertEqual(form[0]["sot_hit_rate"], 1.0)
+
+    def test_recent_player_loader_batches_and_reuses_finished_fixture_cache(self):
+        store_fixture(self.conn, "EPL", FIXTURE)
+        self.conn.commit()
+        recent = {
+            "fixture": {"id": 888001, "date": "2026-08-30T15:00:00+02:00"},
+            "players": [],
+        }
+        detailed = copy.deepcopy(recent)
+        detailed["players"] = [
+            {
+                "team": {"id": 50, "name": "Manchester City"},
+                "players": [{
+                    "player": {"id": 778, "name": "Cache Spits"},
+                    "statistics": [{
+                        "games": {"minutes": 90},
+                        "shots": {"total": 4, "on": 2},
+                    }],
+                }],
+            },
+            {
+                "team": {"id": 33, "name": "Manchester United"},
+                "players": [],
+            },
+        ]
+
+        def fake_get(path, params, _key):
+            if path == "fixtures" and "team" in params:
+                return {"response": [recent]}
+            if path == "fixtures" and "ids" in params:
+                return {"response": [detailed]}
+            self.fail(f"Onverwachte API-call: {path} {params}")
+
+        cache = Path(self.tmp.name) / "player-cache"
+        with patch("load_api_football.api_get", side_effect=fake_get) as api:
+            first = load_recent_player_stats(
+                self.conn, "secret", date(2026, 9, 1), cache_dir=cache
+            )
+            self.assertEqual(first["fetched"], 1)
+            self.assertEqual(first["cached"], 0)
+            self.assertEqual(first["player_rows"], 1)
+            self.assertEqual(api.call_count, 3)  # twee teams + één bulkrequest
+
+        with patch("load_api_football.api_get", side_effect=fake_get) as api:
+            second = load_recent_player_stats(
+                self.conn, "secret", date(2026, 9, 1), cache_dir=cache
+            )
+            self.assertEqual(second["cached"], 1)
+            self.assertEqual(second["fetched"], 0)
+            self.assertEqual(api.call_count, 2)  # alleen recente fixturelijsten
 
 
 if __name__ == "__main__":

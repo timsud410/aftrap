@@ -4,6 +4,13 @@ Dagelijkse voetbalprognoses uit een eigen statistiekmodel. Met een API-Football
 sleutel toont de pagina de nog te spelen wedstrijden van de komende acht dagen.
 Zonder sleutel valt de lokale build terug op de laatste gespeelde wedstrijddag.
 
+Voor teams in die vooruitblik haalt de build ook individuele schotdata op. Per
+uitgelichte wedstrijd toont het dashboard maximaal twee spelers per team met
+hun gemiddelde schoten op doel, gemiddelde totale schoten en het aandeel van
+hun laatste maximaal vijf optredens waarin zij minimaal één schot op doel
+hadden. Deze spelersvorm is beschrijvend en wordt niet als backtest-signaal
+gepresenteerd.
+
 ## Betrouwbaarheidsregels
 
 - De schoten-op-doelproxy voor een wedstrijd gebruikt alleen de historische
@@ -45,6 +52,8 @@ API_FOOTBALL_KEY="..." .venv/bin/python build_site.py
 
 In GitHub Actions heet het repository-secret eveneens `API_FOOTBALL_KEY`. De
 sleutel komt niet in de broncode of in de gebouwde webpagina terecht.
+Afgeronde spelerstatistieken worden in `data/api_football` gecachet, zodat een
+dagelijkse build dezelfde duels niet opnieuw van de API hoeft te halen.
 
 ## Walk-forward backtest
 

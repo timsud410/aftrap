@@ -91,6 +91,33 @@ CREATE TABLE IF NOT EXISTS fixture_stats (
     PRIMARY KEY (fixture_id, team_id)
 );
 
+-- Individuele API-Football-statistieken. Deze staan los van `fixtures`, omdat
+-- de recente vijf optredens van een speler ook beker- en Europese duels kunnen
+-- bevatten die niet in onze zes competitiedatasets voorkomen.
+CREATE TABLE IF NOT EXISTS players (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    source      TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    photo       TEXT,
+    UNIQUE (source, external_id)
+);
+
+CREATE TABLE IF NOT EXISTS player_match_stats (
+    source              TEXT NOT NULL,
+    external_fixture_id TEXT NOT NULL,
+    match_date          TEXT NOT NULL,
+    team_id             INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    player_id           INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    minutes             INTEGER,
+    shots               INTEGER,
+    shots_on_target     INTEGER,
+    PRIMARY KEY (source, external_fixture_id, player_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_form
+ON player_match_stats (team_id, match_date DESC);
+
 -- xg_source maakt het verschil tussen meten en schatten zichtbaar tot in de UI.
 --   understat    : shot-level xG, 2014/15+
 --   api_football  : xG uit API-Football, 2023/24+

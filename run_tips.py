@@ -156,6 +156,60 @@ def team_form(
     }
 
 
+def player_shot_form(
+    conn: sqlite3.Connection,
+    team_id: int,
+    cutoff: str,
+    appearances: int = 5,
+    limit: int = 2,
+) -> list[dict]:
+    """Beste recente schotprofielen, op maximaal vijf eerdere optredens.
+
+    Dit is beschrijvende vormdata en nadrukkelijk geen gekalibreerde
+    spelers-probability. Spelers met minder dan drie bruikbare optredens worden
+    niet getoond om uitschieters uit één invalbeurt te voorkomen.
+    """
+    rows = conn.execute(
+        """SELECT p.id, p.name, s.match_date, s.minutes,
+                  s.shots, s.shots_on_target
+           FROM player_match_stats s
+           JOIN players p ON p.id = s.player_id
+           WHERE s.team_id = ? AND s.match_date < ?
+             AND s.shots_on_target IS NOT NULL
+             AND COALESCE(s.minutes, 0) > 0
+           ORDER BY p.id, s.match_date DESC""",
+        (team_id, cutoff),
+    ).fetchall()
+    by_player: dict[int, list[sqlite3.Row]] = {}
+    for row in rows:
+        group = by_player.setdefault(int(row["id"]), [])
+        if len(group) < appearances:
+            group.append(row)
+
+    candidates = []
+    for player_rows in by_player.values():
+        if len(player_rows) < 3:
+            continue
+        sot = [int(row["shots_on_target"]) for row in player_rows]
+        shots = [int(row["shots"] or 0) for row in player_rows]
+        hits = sum(value >= 1 for value in sot)
+        candidates.append({
+            "name": player_rows[0]["name"],
+            "n": len(player_rows),
+            "sot_avg": round(statistics.fmean(sot), 2),
+            "shots_avg": round(statistics.fmean(shots), 2),
+            "sot_hits": hits,
+            "sot_hit_rate": round(hits / len(sot), 3),
+        })
+    candidates.sort(
+        key=lambda item: (
+            item["sot_avg"], item["sot_hit_rate"], item["shots_avg"], item["n"]
+        ),
+        reverse=True,
+    )
+    return candidates[:limit]
+
+
 def pick_review_date(conn: sqlite3.Connection, min_matches: int = 6) -> str | None:
     row = conn.execute(
         """SELECT match_date, COUNT(*) n FROM fixtures
@@ -387,7 +441,8 @@ def build_day(
     fixtures = conn.execute(
         """SELECT f.id, f.league_code, f.season, l.name league,
                   l.first_half_ratio, l.rho,
-                  f.kickoff, th.name home, ta.name away,
+                  f.kickoff, f.home_team_id, f.away_team_id,
+                  th.name home, ta.name away,
                   f.home_goals, f.away_goals,
                   f.home_goals_ht, f.away_goals_ht
            FROM fixtures f
@@ -433,6 +488,13 @@ def build_day(
 
         hg, ag = f["home_goals"], f["away_goals"]
         played = hg is not None and ag is not None
+        players = []
+        for team_id, team_name in (
+            (int(f["home_team_id"]), f["home"]),
+            (int(f["away_team_id"]), f["away"]),
+        ):
+            for player in player_shot_form(conn, team_id, cutoff):
+                players.append({**player, "team": team_name})
 
         out.append({
             "league": f["league"], "league_code": f["league_code"],
@@ -447,6 +509,7 @@ def build_day(
             "p_btts": round(pred["probs"]["btts_yes"], 3),
             "quality": round(quality, 2), "xg_source": source,
             "score": f"{hg}-{ag}" if played else None,
+            "players": players,
             "tips": [{
                 "s": label(t.selection, f["home"], f["away"]),
                 "raw": t.selection, "m": t.market, "p": round(t.model_prob, 3),

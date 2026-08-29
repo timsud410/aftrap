@@ -70,6 +70,7 @@ def main() -> int:
         conn = store.connect(load_fdcouk.DEFAULT_DB)
         try:
             result = load_api_football.load_upcoming(conn, api_key)
+            player_result = load_api_football.load_recent_player_stats(conn, api_key)
         finally:
             conn.close()
         print(
@@ -80,6 +81,18 @@ def main() -> int:
             print("  Nieuwe teams zonder historische naamkoppeling:")
             for name in result["new_teams"]:
                 print(f"    - {name}")
+        print(
+            f"  Spelersvorm: {player_result['teams']} teams, "
+            f"{player_result['fixtures']} recente duels, "
+            f"{player_result['player_rows']} spelerregels "
+            f"({player_result['cached']} uit cache)."
+        )
+        if player_result["team_failures"] or player_result["fixture_failures"]:
+            print(
+                "  Let op: spelersdata ontbrak voor "
+                f"{player_result['team_failures']} teams en "
+                f"{player_result['fixture_failures']} duels."
+            )
 
     try:
         step("Data ophalen", load)
