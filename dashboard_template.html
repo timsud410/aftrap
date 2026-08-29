@@ -1,475 +1,266 @@
-<title>Aftrap Speeldagboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
-
-<style>
-  :root {
-    --ground:   #F4F1F0;
-    --surface:  #FFFFFF;
-    --sunken:   #EDE9E8;
-    --ink:      #16161A;
-    --ink-soft: #4A4A52;
-    --muted:    #8A868C;
-    --faint:    #ADA8AE;
-    --rule:     #E7E2E1;
-    --accent:   #C7365A;
-    --accent-tint: #C7365A14;
-    --contrast: #16161A;
-    --on-contrast: #FFFFFF;
-    --good:     #1B7A4B;
-    --good-tint:#1B7A4B14;
-
-    --shadow-sm: 0 1px 2px rgba(22,22,26,.05), 0 1px 3px rgba(22,22,26,.04);
-    --shadow-md: 0 2px 4px rgba(22,22,26,.04), 0 6px 16px rgba(22,22,26,.06);
-
-    --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
-
-    --f-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --f-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-
-    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
-    --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ground:   #131215;
-      --surface:  #1C1A1E;
-      --sunken:   #0E0D10;
-      --ink:      #F0EDEE;
-      --ink-soft: #C3BDC0;
-      --muted:    #918B93;
-      --faint:    #6E6872;
-      --rule:     #2C2930;
-      --accent:   #E8557A;
-      --accent-tint: #E8557A1F;
-      --contrast: #F0EDEE;
-      --on-contrast: #16161A;
-      --good:     #4FBE86;
-      --good-tint:#4FBE861F;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
-      --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 8px 20px rgba(0,0,0,.35);
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="description" content="Datagedreven voetbaltips met transparante modelkansen en onderbouwing.">
+  <meta property="og:title" content="Aftrap — datagedreven voetbaltips">
+  <meta property="og:description" content="Zie direct waar het model wél iets ziet.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://timsud410.github.io/aftrap/">
+  <meta property="og:image" content="https://timsud410.github.io/aftrap/aftrap-og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Aftrap — datagedreven voetbaltips">
+  <meta name="twitter:description" content="Zie direct waar het model wél iets ziet.">
+  <meta name="twitter:image" content="https://timsud410.github.io/aftrap/aftrap-og.png">
+  <title>Aftrap — datagedreven voetbaltips</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --navy: #0b1220; --navy-2: #131d30; --ink: #111827; --muted: #667085;
+      --line: #e6e9ee; --paper: #fff; --ground: #f5f7f6; --lime: #b7f36b;
+      --lime-soft: #edfbdc; --blue: #315fbc; --radius: 16px; --radius-lg: 24px;
+      --shadow: 0 12px 32px rgba(11,18,32,.07);
+      --ui: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --num: "DM Mono", ui-monospace, monospace;
     }
-  }
-
-  :root[data-theme="dark"] {
-    --ground:   #131215;
-    --surface:  #1C1A1E;
-    --sunken:   #0E0D10;
-    --ink:      #F0EDEE;
-    --ink-soft: #C3BDC0;
-    --muted:    #918B93;
-    --faint:    #6E6872;
-    --rule:     #2C2930;
-    --accent:   #E8557A;
-    --accent-tint: #E8557A1F;
-    --contrast: #F0EDEE;
-    --on-contrast: #16161A;
-    --good:     #4FBE86;
-    --good-tint:#4FBE861F;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
-    --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 8px 20px rgba(0,0,0,.35);
-  }
-
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    background: var(--ground);
-    color: var(--ink);
-    font-family: var(--f-ui);
-    font-size: 15px;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .wrap { max-width: 1080px; margin: 0 auto; padding: var(--s6) var(--s5) var(--s8); }
-
-  /* ---------- kop ---------- */
-
-  .masthead {
-    display: flex; flex-wrap: wrap; align-items: center;
-    justify-content: space-between; gap: var(--s4);
-    margin-bottom: var(--s5);
-  }
-
-  .brand { display: flex; align-items: center; gap: var(--s3); }
-
-  .mark {
-    width: 42px; height: 42px; flex: none;
-    border-radius: var(--r-pill);
-    background: var(--accent);
-    display: grid; place-items: center;
-    color: #fff; font-weight: 800; font-size: 18px; letter-spacing: -0.02em;
-  }
-
-  .wordmark {
-    margin: 0; font-size: 26px; font-weight: 800;
-    letter-spacing: -0.03em; line-height: 1.1;
-  }
-
-  .wordmark small {
-    display: block; font-size: 13px; font-weight: 500;
-    color: var(--muted); letter-spacing: 0;
-  }
-
-  .stamp {
-    background: var(--contrast); color: var(--on-contrast);
-    border-radius: var(--r-pill); padding: 8px 18px;
-    font-size: 13px; font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* ---------- meldingen ---------- */
-
-  .notice {
-    background: var(--accent-tint);
-    border-radius: var(--r-md);
-    padding: var(--s4) var(--s5);
-    font-size: 14px; color: var(--ink-soft);
-    margin-bottom: var(--s5);
-  }
-
-  .notice b { color: var(--accent); font-weight: 700; }
-
-  /* ---------- kerncijfers ---------- */
-
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--s3);
-    margin-bottom: var(--s6);
-  }
-
-  .stat {
-    background: var(--surface); border-radius: var(--r-md);
-    padding: var(--s4) var(--s5); box-shadow: var(--shadow-sm);
-  }
-
-  .stat.dark { background: var(--contrast); }
-  .stat.dark .stat-label { color: rgba(255,255,255,.55); }
-  :root[data-theme="dark"] .stat.dark .stat-label,
-  :root:not([data-theme="light"]) .stat.dark .stat-label { color: rgba(0,0,0,.5); }
-  .stat.dark .stat-value, .stat.dark .stat-sub { color: var(--on-contrast); }
-
-  .stat-label {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-    text-transform: uppercase; color: var(--faint);
-  }
-
-  .stat-value {
-    font-size: 30px; font-weight: 800; letter-spacing: -0.03em;
-    line-height: 1.15; font-variant-numeric: tabular-nums;
-    margin-top: 2px;
-  }
-
-  .stat-value .unit { font-size: 16px; font-weight: 600; color: var(--muted); }
-  .stat-sub { font-size: 12.5px; color: var(--muted); }
-
-  /* ---------- competitie ---------- */
-
-  .league { margin-bottom: var(--s6); }
-
-  .league-head {
-    display: flex; align-items: center; gap: var(--s3);
-    margin-bottom: var(--s3); padding-left: var(--s2);
-  }
-
-  .league-name {
-    margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
-  }
-
-  .league-meta { font-size: 12.5px; color: var(--faint); margin-left: auto; }
-
-  /* ---------- wedstrijd ---------- */
-
-  .fixtures { display: flex; flex-direction: column; gap: var(--s3); }
-
-  .fixture {
-    background: var(--surface); border-radius: var(--r-lg);
-    padding: var(--s4) var(--s5); box-shadow: var(--shadow-sm);
-  }
-
-  .fixture.silent { background: transparent; box-shadow: none; border: 1px dashed var(--rule); }
-
-  .fx-top {
-    display: flex; flex-wrap: wrap; align-items: center;
-    gap: var(--s3) var(--s4);
-  }
-
-  .match-date, .kickoff {
-    font-size: 12.5px; font-weight: 600; color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .match-date { min-width: 72px; text-transform: capitalize; }
-  .kickoff { min-width: 42px; }
-
-  .teams { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; }
-  .teams .vs { color: var(--faint); font-weight: 500; padding: 0 7px; }
-
-  .result {
-    background: var(--contrast); color: var(--on-contrast);
-    border-radius: var(--r-sm); padding: 3px 10px;
-    font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums;
-  }
-
-  .proxy {
-    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em;
-    text-transform: uppercase; color: var(--muted);
-    background: var(--sunken); border-radius: var(--r-pill); padding: 2px 9px;
-  }
-
-  .numstrip {
-    margin-left: auto; display: flex; gap: var(--s4);
-    font-family: var(--f-num); font-size: 11.5px;
-    font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap;
-  }
-
-  .numstrip i { font-style: normal; color: var(--faint); }
-  .numstrip b { font-weight: 500; color: var(--ink-soft); }
-
-  /* ---------- tips ---------- */
-
-  .tips { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s4); }
-
-  .tip {
-    display: grid; grid-template-columns: 20px 1fr; gap: var(--s3);
-    background: var(--sunken); border-radius: var(--r-md); padding: var(--s3) var(--s4);
-  }
-
-  /* Vertrouwen als dichtheid, niet als stoplicht: dit zegt hoe zeker het
-     model is, niet of je moet inzetten. */
-  .weight { display: flex; flex-direction: column-reverse; gap: 3px; padding-top: 6px; }
-  .weight i { display: block; height: 4px; border-radius: 2px; background: var(--rule); }
-  .weight i.on { background: var(--accent); }
-
-  .tip-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
-  .tip-sel { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
-
-  .tip-prob {
-    font-size: 15px; font-weight: 800; color: var(--accent);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .tag {
-    font-size: 11px; font-weight: 600; color: var(--muted);
-    background: var(--surface); border-radius: var(--r-pill); padding: 2px 10px;
-  }
-
-  .verdict {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-    text-transform: uppercase; border-radius: var(--r-pill); padding: 2px 10px;
-  }
-
-  /* Groen voor raak, grijs voor mis. Bewust geen rood: het accent is al
-     karmijn, en een rode misser zou de merkkleur laten schreeuwen. */
-  .verdict.hit  { color: var(--good); background: var(--good-tint); }
-  .verdict.miss { color: var(--faint); background: var(--surface); }
-
-  .tip-why {
-    margin: var(--s1) 0 0; font-size: 13.5px; line-height: 1.5;
-    color: var(--ink-soft); max-width: 70ch;
-  }
-
-  .tip-src { margin-top: 5px; font-family: var(--f-num); font-size: 10.5px; color: var(--faint); }
-
-  .notip { margin-top: var(--s3); font-size: 13px; color: var(--faint); }
-
-  /* ---------- voetnoot ---------- */
-
-  .footnote {
-    background: var(--surface); border-radius: var(--r-lg);
-    padding: var(--s5); box-shadow: var(--shadow-sm);
-    font-size: 13.5px; color: var(--ink-soft); max-width: 74ch;
-  }
-
-  .footnote h3 {
-    margin: 0 0 var(--s3); font-size: 15px; font-weight: 700; color: var(--ink);
-  }
-
-  .footnote p { margin: 0 0 var(--s3); }
-  .footnote p:last-child { margin-bottom: 0; }
-  .footnote strong { color: var(--ink); font-weight: 700; }
-
-  @media (max-width: 680px) {
-    .wrap { padding: var(--s5) var(--s4) var(--s7); }
-    .numstrip { margin-left: 0; width: 100%; flex-wrap: wrap; gap: var(--s3); }
-    .stat-value { font-size: 26px; }
-  }
-</style>
-
-<div class="wrap">
-
-  <header class="masthead">
-    <div class="brand">
-      <div class="mark" aria-hidden="true">A</div>
-      <h1 class="wordmark">Aftrap<small>speeldag __MATCHDAY__</small></h1>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+    button, select { font: inherit; }
+    button { cursor: pointer; }
+    .topbar { position: sticky; top: 0; z-index: 30; background: rgba(11,18,32,.96); color: white; backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.08); }
+    .topbar-inner { max-width: 1180px; min-height: 68px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: var(--lime); color: var(--navy); font-size: 18px; font-weight: 800; letter-spacing: -.06em; transform: rotate(-4deg); }
+    .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -.04em; }
+    .brand-tagline { padding-left: 12px; border-left: 1px solid rgba(255,255,255,.18); color: #aeb8c9; font-size: 12px; font-weight: 600; }
+    .top-meta { display: flex; align-items: center; gap: 12px; color: #aeb8c9; font-size: 12px; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 4px rgba(183,243,107,.12); }
+    .help-button { border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 8px 12px; background: transparent; color: white; font-size: 11px; font-weight: 800; }
+    .help-button:hover { border-color: var(--lime); color: var(--lime); }
+    .shell { max-width: 1180px; margin: 0 auto; padding: 42px 24px 80px; }
+    .hero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0,1.5fr) minmax(320px,.8fr); gap: 40px; background: var(--navy); color: white; border-radius: 28px; padding: 46px 48px; box-shadow: var(--shadow); }
+    .hero::after { content: ""; position: absolute; width: 320px; height: 320px; right: -125px; top: -130px; border: 1px solid rgba(183,243,107,.28); border-radius: 50%; box-shadow: 0 0 0 42px rgba(183,243,107,.035),0 0 0 84px rgba(183,243,107,.025); }
+    .hero-copy, .hero-summary { position: relative; z-index: 1; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; color: var(--lime); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 18px; height: 2px; background: currentColor; }
+    .hero h1 { max-width: 720px; margin: 0; font-size: clamp(35px,5vw,60px); line-height: 1.02; letter-spacing: -.06em; }
+    .hero-copy > p { max-width: 610px; margin: 20px 0 0; color: #bbc5d5; font-size: 16px; line-height: 1.7; }
+    .hero-note { margin-top: 24px; display: inline-flex; align-items: center; gap: 9px; color: #dde5ef; font-size: 12px; font-weight: 600; }
+    .hero-note span { color: var(--lime); font-size: 16px; }
+    .hero-summary { align-self: end; display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .hero-stat { min-height: 108px; padding: 18px; border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius); background: rgba(255,255,255,.055); }
+    .hero-stat.primary { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+    .hero-stat strong { display: block; font-size: 32px; line-height: 1; letter-spacing: -.05em; }
+    .hero-stat span { display: block; margin-top: 9px; color: #aeb8c9; font-size: 12px; line-height: 1.35; }
+    .hero-stat.primary span { color: #3f5f1e; }
+    .workspace { margin-top: 34px; }
+    .view-tabs { display: flex; gap: 6px; width: fit-content; padding: 5px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
+    .view-tab { border: 0; border-radius: 9px; padding: 10px 16px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .view-tab.active { background: var(--navy); color: white; }
+    .view-tab .count { margin-left: 6px; opacity: .62; }
+    .controls { margin: 18px 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .date-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+    .date-chips::-webkit-scrollbar { display: none; }
+    .date-chip { flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; background: var(--paper); color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .date-chip.active { background: var(--lime-soft); border-color: #cceca7; color: #365c15; }
+    .league-select { min-width: 190px; border: 1px solid var(--line); border-radius: 11px; padding: 10px 36px 10px 13px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 700; }
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin: 30px 0 16px; }
+    .section-head h2 { margin: 0; font-size: 23px; letter-spacing: -.04em; }
+    .section-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .result-count { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .pick-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .pick-card { min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 22px; box-shadow: 0 3px 10px rgba(11,18,32,.025); transition: transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
+    .pick-card:hover { transform: translateY(-2px); border-color: #d4d9e1; box-shadow: var(--shadow); }
+    .pick-card.featured { border-color: #c7e99e; background: linear-gradient(145deg,#fff 45%,#f5ffe9 100%); }
+    .pick-meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .pick-meta .league-pill { margin-left: auto; border-radius: 999px; padding: 5px 9px; background: #f1f3f6; color: #515b6b; }
+    .featured-label { color: #4e771f; }
+    .outcome { border-radius: 999px; padding: 5px 9px; background: #f1f3f6; color: #626b78; }
+    .outcome.hit { background: var(--lime-soft); color: #4e771f; }
+    .fixture-name { margin: 17px 0 18px; font-size: 17px; font-weight: 800; letter-spacing: -.025em; }
+    .fixture-name span { padding: 0 5px; color: #adb4bf; font-weight: 500; }
+    .selection-box { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 17px; border-radius: 14px; background: var(--navy); color: white; }
+    .selection-label { display: block; margin-bottom: 5px; color: #98a6ba; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .selection-name { display: block; font-size: 17px; font-weight: 800; line-height: 1.25; }
+    .chance { min-width: 70px; padding-left: 18px; border-left: 1px solid rgba(255,255,255,.13); text-align: right; }
+    .chance strong { display: block; color: var(--lime); font-family: var(--num); font-size: 24px; line-height: 1; }
+    .chance span { display: block; margin-top: 6px; color: #98a6ba; font-size: 9px; text-transform: uppercase; }
+    .confidence { margin: 17px 0 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .confidence-copy { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .confidence-copy b { color: var(--ink); }
+    .confidence-bars { display: flex; gap: 4px; }
+    .confidence-bars i { width: 22px; height: 5px; border-radius: 5px; background: #e6e9ed; }
+    .confidence-bars i.on { background: #7fba3d; }
+    .rationale { margin: 15px 0 0; color: #505a69; font-size: 13px; line-height: 1.6; }
+    details.model-details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 13px; }
+    details.model-details summary { list-style: none; color: var(--blue); font-size: 11px; font-weight: 800; cursor: pointer; }
+    details.model-details summary::-webkit-details-marker { display: none; }
+    details.model-details summary::after { content: "+"; float: right; color: #99a2b0; font-size: 15px; }
+    details[open].model-details summary::after { content: "−"; }
+    .prob-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-top: 13px; }
+    .prob-cell { padding: 9px 5px; border-radius: 8px; background: #f5f7f8; text-align: center; }
+    .prob-cell span { display: block; color: #929aa7; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+    .prob-cell b { display: block; margin-top: 3px; font-family: var(--num); font-size: 11px; }
+    .matches { display: flex; flex-direction: column; gap: 18px; }
+    .match-day { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .match-day-head { padding: 14px 18px; background: #f0f3f4; font-size: 12px; font-weight: 800; }
+    .match-row { display: grid; grid-template-columns: 56px minmax(240px,1.3fr) minmax(280px,1fr) auto; align-items: center; gap: 18px; min-height: 66px; padding: 12px 18px; border-top: 1px solid var(--line); }
+    .match-row:first-of-type { border-top: 0; }
+    .match-time { font-family: var(--num); color: var(--muted); font-size: 12px; }
+    .match-teams { font-size: 13px; font-weight: 800; }
+    .match-teams span { color: #a8afba; padding: 0 5px; font-weight: 500; }
+    .match-league { color: var(--muted); font-size: 10px; font-weight: 700; }
+    .match-model { display: flex; align-items: center; gap: 8px; color: var(--muted); font-family: var(--num); font-size: 10px; }
+    .match-model b { color: var(--ink); font-weight: 500; }
+    .match-tip { border-radius: 999px; padding: 7px 10px; background: var(--lime-soft); color: #4a751d; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .match-tip.none { background: #f3f4f6; color: #9299a4; }
+    .empty { padding: 56px 24px; text-align: center; color: var(--muted); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+    .hidden { display: none !important; }
+    .more-wrap { display: flex; justify-content: center; margin-top: 22px; }
+    .more-button { border: 1px solid var(--navy); border-radius: 999px; padding: 11px 18px; background: var(--paper); color: var(--navy); font-size: 12px; font-weight: 800; }
+    .more-button:hover { background: var(--navy); color: white; }
+    .trust-strip { margin-top: 40px; display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .trust-item { padding: 19px; border-radius: var(--radius); background: #e9eeed; }
+    .trust-item b { display: block; font-size: 12px; }
+    .trust-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    footer { margin-top: 32px; display: flex; justify-content: space-between; gap: 20px; color: #848d9a; font-size: 10px; }
+    footer strong { color: #4f5967; }
+    dialog { width: min(620px,calc(100% - 28px)); padding: 0; border: 0; border-radius: 24px; color: var(--ink); box-shadow: 0 30px 80px rgba(11,18,32,.3); }
+    dialog::backdrop { background: rgba(5,10,19,.68); backdrop-filter: blur(5px); }
+    .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 20px; padding: 26px 28px 20px; background: var(--navy); color: white; }
+    .dialog-head small { color: var(--lime); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .dialog-head h2 { margin: 7px 0 0; font-size: 25px; letter-spacing: -.045em; }
+    .dialog-close { width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; background: transparent; color: white; font-size: 20px; line-height: 1; }
+    .dialog-body { padding: 26px 28px 30px; }
+    .how-list { display: grid; gap: 18px; counter-reset: steps; }
+    .how-step { position: relative; padding-left: 46px; }
+    .how-step::before { counter-increment: steps; content: counter(steps); position: absolute; left: 0; top: 0; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: var(--lime-soft); color: #4e771f; font-family: var(--num); font-size: 12px; font-weight: 800; }
+    .how-step b { display: block; font-size: 13px; }
+    .how-step p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .dialog-note { margin: 22px 0 0; padding: 14px; border-radius: 12px; background: #f2f4f6; color: #596270; font-size: 11px; line-height: 1.6; }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; padding: 38px; }
+      .hero-summary { grid-template-columns: repeat(3,1fr); }
+      .hero-stat { min-height: 92px; }
+      .pick-grid { grid-template-columns: 1fr; }
+      .match-row { grid-template-columns: 50px 1fr auto; gap: 10px; }
+      .match-model { display: none; }
+    }
+    @media (max-width: 620px) {
+      .brand-tagline,.top-meta > span:not(.live-dot) { display: none; }
+      .topbar-inner { min-height: 60px; padding: 0 16px; }
+      .shell { padding: 20px 14px 56px; }
+      .hero { border-radius: 20px; padding: 28px 22px; }
+      .hero h1 { font-size: 38px; }
+      .hero-copy > p { font-size: 14px; }
+      .hero-summary { gap: 7px; }
+      .hero-stat { min-height: 84px; padding: 13px; }
+      .hero-stat strong { font-size: 26px; }
+      .hero-stat span { font-size: 9px; }
+      .workspace { margin-top: 22px; }
+      .view-tabs { width: 100%; }
+      .view-tab { flex: 1; padding: 10px 8px; }
+      .controls { align-items: stretch; flex-direction: column; gap: 10px; }
+      .league-select { width: 100%; }
+      .section-head { align-items: start; flex-direction: column; gap: 8px; }
+      .pick-card { padding: 17px; border-radius: 18px; }
+      .selection-box { padding: 14px; }
+      .selection-name { font-size: 15px; }
+      .chance strong { font-size: 21px; }
+      .prob-row { grid-template-columns: repeat(3,1fr); }
+      .match-row { grid-template-columns: 44px minmax(0,1fr); }
+      .match-tip { display: none; }
+      .trust-strip { grid-template-columns: 1fr; }
+      footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><div class="brand-mark" aria-hidden="true">A</div><div class="brand-name">Aftrap</div><div class="brand-tagline">Modelselecties voor voetbal</div></div>
+      <div class="top-meta"><span class="live-dot"></span><span>Bijgewerkt __GENERATED__</span><button class="help-button" id="open-help">Hoe werkt dit?</button></div>
     </div>
-    <div class="stamp" id="stamp">gegenereerd __GENERATED__</div>
   </header>
-
-  <div class="notice" id="notice"></div>
-
-  <section class="stats" id="stats"></section>
-
-  <main id="board"></main>
-
-  <div class="footnote">
-    <h3>Hoe je dit leest</h3>
-    <p>
-      <strong>Het model kijkt nooit voorbij het generatiemoment.</strong> Het is
-      uitsluitend gefit op eerder gespeelde wedstrijden. In terugkijkmodus
-      staan uitslagen er alleen naast om te controleren, nooit om mee te rekenen.
-    </p>
-    <p>
-      <strong>De streepjes zijn zekerheid, geen advies.</strong> Ze zeggen hoe
-      uitgesproken het model is. Er zitten geen quoteringen in de berekening,
-      dus dit rangschikt op onderbouwing en niet op rendement.
-    </p>
-    <p>
-      <strong>Wedstrijden zonder tip zijn het punt, niet een gebrek.</strong>
-      Een systeem dat elke dag verplicht drie tips per wedstrijd levert, vult
-      de gaten met ruis.
-    </p>
-    <p>
-      <strong>Elk cijfer in een onderbouwing komt uit de database.</strong> De
-      zinnen worden opgebouwd uit vaste sjablonen met de ruwe waarden erin.
-    </p>
-  </div>
-
-</div>
-
-<script>
-const DATA = /*__DATA__*/[];
-// Wordt alleen door de demo-bouwer op true gezet. Zo kan een pagina met
-// verzonnen teamsterktes zichzelf nooit voordoen als echte uitkomsten.
-const DEMO = /*__DEMO__*/false;
-
-const BAND = {
-  high:      { fill: 3, label: "hoog" },
-  medium:    { fill: 2, label: "gemiddeld" },
-  low:       { fill: 1, label: "laag" },
-  thin_data: { fill: 1, label: "weinig data" }
-};
-
-const SOURCE_LABEL = {
-  understat: null, api_football: null, sot_proxy: "schoten op doel"
-};
-
-const pct = v => Math.round(v * 100) + "%";
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
-const matchDate = value => new Intl.DateTimeFormat("nl-NL", {
-  weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Amsterdam"
-}).format(new Date(`${value}T12:00:00+02:00`));
-
-function weightMark(band) {
-  const n = BAND[band].fill;
-  let h = `<div class="weight" role="img" aria-label="vertrouwen: ${BAND[band].label}">`;
-  for (let i = 0; i < 3; i++) h += `<i class="${i < n ? "on" : ""}"></i>`;
-  return h + "</div>";
-}
-
-function renderStats() {
-  const tips = DATA.flatMap(f => f.tips);
-  const settled = tips.filter(t => t.hit !== null && t.hit !== undefined);
-  const hits = settled.filter(t => t.hit).length;
-  const silent = DATA.filter(f => f.tips.length === 0).length;
-  const strong = tips.filter(t => t.b === "high").length;
-
-  const cells = [
-    ["Wedstrijden", DATA.length, `${new Set(DATA.map(f => f.league)).size} competities`],
-    ["Tips", tips.length, "max 3 per wedstrijd"],
-    ["Hoog vertrouwen", strong, `van de ${tips.length}`],
-    ["Geen tip", silent, "signalen te zwak"]
-  ];
-
-  let html = cells.map(([l, v, s]) =>
-    `<div class="stat"><div class="stat-label">${l}</div>
-     <div class="stat-value">${v}</div><div class="stat-sub">${s}</div></div>`).join("");
-
-  if (settled.length) {
-    html += `<div class="stat dark"><div class="stat-label">Uitgekomen</div>
-      <div class="stat-value">${Math.round(hits / settled.length * 100)}<span class="unit">%</span></div>
-      <div class="stat-sub">${hits} van ${settled.length}</div></div>`;
-  }
-  document.getElementById("stats").innerHTML = html;
-
-  const n = settled.length;
-  document.getElementById("notice").innerHTML = DEMO
-    ? `<b>Ontwerpvoorbeeld.</b> De teamsterktes zijn gesimuleerd, niet echt. Ze
-       gaan wel door het werkelijke model en de werkelijke tipselectie, dus de
-       onderlinge verhoudingen kloppen: kansen tellen op tot 100%, tips spreken
-       elkaar niet tegen, en wedstrijden zonder signaal krijgen geen tip.`
-    : n
-    ? `<b>Terugkijkmodus.</b> Het model is gefit op uitsluitend data van vóór deze
-       speeldag en kende de uitslagen niet. Van ${n} afgewikkelde tips kwamen er
-       ${hits} uit. Bij deze aantallen zegt dat nog niets over kwaliteit —
-       daar zijn honderden speeldagen voor nodig.`
-    : `<b>Vooruitblik.</b> Deze wedstrijden zijn nog niet gespeeld.`;
-}
-
-function renderBoard() {
-  const groups = [];
-  for (const f of DATA) {
-    let g = groups.find(x => x.name === f.league);
-    if (!g) { g = { name: f.league, fixtures: [] }; groups.push(g); }
-    g.fixtures.push(f);
-  }
-
-  document.getElementById("board").innerHTML = groups.map(g => {
-    const n = g.fixtures.reduce((a, f) => a + f.tips.length, 0);
-
-    const cards = g.fixtures.map(f => {
-      const proxy = SOURCE_LABEL[f.xg_source];
-      const strip = `<div class="numstrip">
-        <span><i>model</i> <b>${f.lambda_home.toFixed(2)}–${f.lambda_away.toFixed(2)}</b></span>
-        <span><i>1</i> <b>${pct(f.p_home)}</b> <i>X</i> <b>${pct(f.p_draw)}</b> <i>2</i> <b>${pct(f.p_away)}</b></span>
-        <span><i>o2.5</i> <b>${pct(f.p_over25)}</b></span>
-        <span><i>btts</i> <b>${pct(f.p_btts)}</b></span></div>`;
-
-      const head = `<div class="fx-top">
-        ${f.date ? `<span class="match-date">${esc(matchDate(f.date))}</span>` : ""}
-        ${f.kickoff ? `<span class="kickoff">${esc(f.kickoff)}</span>` : ""}
-        <span class="teams">${esc(f.home)}<span class="vs">–</span>${esc(f.away)}</span>
-        ${f.score ? `<span class="result">${esc(f.score)}</span>` : ""}
-        ${proxy ? `<span class="proxy">${proxy}</span>` : ""}
-        ${strip}</div>`;
-
-      const body = f.tips.length
-        ? `<div class="tips">` + f.tips.map(t => {
-            const verdict = t.hit === true ? `<span class="verdict hit">uitgekomen</span>`
-                          : t.hit === false ? `<span class="verdict miss">niet uit</span>` : "";
-            return `<article class="tip">${weightMark(t.b)}<div>
-              <div class="tip-head">
-                <span class="tip-sel">${esc(t.s)}</span>
-                <span class="tip-prob">${pct(t.p)}</span>
-                <span class="tag">${esc(t.m)}</span>
-                <span class="tag">${BAND[t.b].label}</span>
-                ${verdict}
-              </div>
-              <p class="tip-why">${esc(t.r)}</p>
-              <div class="tip-src">signaal: ${esc(t.g.join(", "))}</div>
-            </div></article>`;
-          }).join("") + `</div>`
-        : `<div class="notip">Geen tip — geen signaal sterk genoeg voor deze wedstrijd.</div>`;
-
-      return `<div class="fixture${f.tips.length ? "" : " silent"}">${head}${body}</div>`;
-    }).join("");
-
-    return `<section class="league">
-      <div class="league-head">
-        <h2 class="league-name">${esc(g.name)}</h2>
-        <span class="league-meta">${g.fixtures.length} wedstrijden · ${n} tips</span>
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Programma __MATCHDAY__</div>
+        <h1>Zie direct waar het model wél iets ziet.</h1>
+        <p>Geen eindeloze lijst met voorspellingen. Aftrap controleert iedere wedstrijd en toont alleen de selecties waarvoor de historische signalen sterk genoeg zijn.</p>
+        <div class="hero-note"><span>●</span> Modelkans is geen bookmakerquotering of inzetadvies</div>
       </div>
-      <div class="fixtures">${cards}</div></section>`;
-  }).join("");
-}
-
-if (DATA.length) { renderStats(); renderBoard(); }
-else {
-  document.getElementById("notice").innerHTML =
-    "<b>Nog geen data.</b> Draai eerst load_fdcouk.py en daarna run_tips.py.";
-}
-</script>
+      <div class="hero-summary" id="hero-summary"></div>
+    </section>
+    <section class="workspace" aria-label="Voetbaltips">
+      <nav class="view-tabs" aria-label="Weergave">
+        <button class="view-tab active" data-view="tips">Modelselecties <span class="count" id="tip-count"></span></button>
+        <button class="view-tab" data-view="matches">Alle wedstrijden <span class="count" id="match-count"></span></button>
+      </nav>
+      <div class="controls"><div class="date-chips" id="date-chips" aria-label="Filter op datum"></div><select class="league-select" id="league-select" aria-label="Filter op competitie"></select></div>
+      <section id="tips-view">
+        <div class="section-head"><div><h2>Beste modelselecties</h2><p>Gesorteerd op bewijskracht en berekende kans.</p></div><div class="result-count" id="tip-result-count"></div></div>
+        <div class="pick-grid" id="pick-grid"></div><div class="more-wrap hidden" id="more-wrap"><button class="more-button" id="more-button">Toon alle selecties</button></div>
+      </section>
+      <section id="matches-view" class="hidden">
+        <div class="section-head"><div><h2>Volledig programma</h2><p>Inclusief wedstrijden waarvoor het model bewust geen tip geeft.</p></div><div class="result-count" id="match-result-count"></div></div>
+        <div class="matches" id="matches"></div>
+      </section>
+    </section>
+    <section class="trust-strip" aria-label="Betrouwbaarheid">
+      <div class="trust-item"><b>Alleen eerdere wedstrijden</b><span>Het model gebruikt geen uitslagen of informatie uit de toekomst.</span></div>
+      <div class="trust-item"><b>Signalen moeten zich bewijzen</b><span>Een selectie verschijnt pas na toetsing op historische speeldagen.</span></div>
+      <div class="trust-item"><b>Geen tip is óók een uitkomst</b><span>Bij onvoldoende bewijs wordt een wedstrijd bewust overgeslagen.</span></div>
+    </section>
+    <footer><span><strong>Aftrap</strong> · transparante voetbalanalyse</span><span>Geen financieel of weddenschapsadvies</span></footer>
+  </main>
+  <dialog id="help-dialog">
+    <div class="dialog-head"><div><small>Aftrap in één minuut</small><h2>Zo lees je de selecties</h2></div><button class="dialog-close" id="close-help" aria-label="Sluiten">×</button></div>
+    <div class="dialog-body">
+      <div class="how-list">
+        <div class="how-step"><b>Begin bij ‘Modelselecties’</b><p>Aftrap controleert het hele programma, maar laat standaard alleen wedstrijden met voldoende bewijs zien.</p></div>
+        <div class="how-step"><b>Lees modelkans en bewijskracht apart</b><p>De modelkans gaat over de uitkomst. Bewijskracht zegt hoeveel vertrouwen we in het onderliggende signaal hebben.</p></div>
+        <div class="how-step"><b>Open de cijfers als je verdieping wilt</b><p>Onder iedere selectie staan de 1X2-, doelpunten- en BTTS-kansen. Zo blijft de hoofdpagina rustig.</p></div>
+      </div>
+      <p class="dialog-note"><b>Belangrijk:</b> Aftrap gebruikt geen live bookmakerquoteringen en geeft geen inzetadvies. Een hoge modelkans is geen garantie op winst.</p>
+    </div>
+  </dialog>
+  <script>
+    const DATA = /*__DATA__*/[];
+    const DEMO = /*__DEMO__*/false;
+    const BAND = { high:{score:4,label:"sterk",bars:3}, medium:{score:3,label:"goed onderbouwd",bars:2}, low:{score:2,label:"voorzichtig",bars:1}, thin_data:{score:1,label:"beperkte historie",bars:1} };
+    const state = { view:"tips", date:"all", league:"all", expanded:false };
+    const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
+    const pct = value => `${Math.round(value*100)}%`;
+    const esc = value => String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+    const teamName = value => TEAM_DISPLAY[value] || value;
+    const displayText = value => Object.entries(TEAM_DISPLAY).reduce((text,[raw,nice])=>text.replaceAll(raw,nice),String(value));
+    const dateObj = value => new Date(`${value}T12:00:00`);
+    const shortDate = value => new Intl.DateTimeFormat("nl-NL",{weekday:"short",day:"numeric",month:"short"}).format(dateObj(value));
+    const longDate = value => new Intl.DateTimeFormat("nl-NL",{weekday:"long",day:"numeric",month:"long"}).format(dateObj(value));
+    const relativeDate = value => { const now=new Date(); const today=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12); const delta=Math.round((dateObj(value)-today)/86400000); if(delta===0)return "Vandaag"; if(delta===1)return "Morgen"; return shortDate(value); };
+    const allTips = DATA.flatMap(fixture=>fixture.tips.map(tip=>({fixture,tip})));
+    function renderSummary(){ const leagues=new Set(DATA.map(f=>f.league)).size; document.getElementById("hero-summary").innerHTML=`<div class="hero-stat primary"><strong>${allTips.length}</strong><span>selecties uit het programma</span></div><div class="hero-stat"><strong>${DATA.length}</strong><span>wedstrijden gecontroleerd</span></div><div class="hero-stat"><strong>${leagues}</strong><span>competities gevolgd</span></div>`; document.getElementById("tip-count").textContent=allTips.length; document.getElementById("match-count").textContent=DATA.length; }
+    function renderFilters(){ const dates=[...new Set(DATA.map(f=>f.date))].sort(); document.getElementById("date-chips").innerHTML=[`<button class="date-chip active" data-date="all">Alle dagen</button>`,...dates.map(date=>`<button class="date-chip" data-date="${esc(date)}">${esc(relativeDate(date))}</button>`)].join(""); const leagues=[...new Set(DATA.map(f=>f.league))].sort(); document.getElementById("league-select").innerHTML=`<option value="all">Alle competities</option>`+leagues.map(league=>`<option value="${esc(league)}">${esc(league)}</option>`).join(""); }
+    function filteredFixtures(){ return DATA.filter(f=>(state.date==="all"||f.date===state.date)&&(state.league==="all"||f.league===state.league)); }
+    function confidenceBars(band){ const info=BAND[band]||BAND.low; return `<div class="confidence-bars" aria-label="Bewijskracht: ${esc(info.label)}">${[1,2,3].map(i=>`<i class="${i<=info.bars?"on":""}"></i>`).join("")}</div>`; }
+    function pickCard(fixture,tip,index){ const info=BAND[tip.b]||BAND.low; const outcome=tip.hit===true?`<span class="outcome hit">Uitgekomen</span>`:tip.hit===false?`<span class="outcome">Niet uitgekomen</span>`:""; return `<article class="pick-card ${index<2?"featured":""}"><div class="pick-meta">${index<2?`<span class="featured-label">● Uitgelicht</span><span>·</span>`:""}<span>${esc(shortDate(fixture.date))} · ${esc(fixture.kickoff||"tijd n.n.b.")}</span>${outcome}<span class="league-pill">${esc(fixture.league)}</span></div><div class="fixture-name">${esc(teamName(fixture.home))}<span>—</span>${esc(teamName(fixture.away))}</div><div class="selection-box"><div><span class="selection-label">Modelselectie</span><strong class="selection-name">${esc(displayText(tip.s))}</strong></div><div class="chance"><strong>${pct(tip.p)}</strong><span>modelkans</span></div></div><div class="confidence"><span class="confidence-copy">Bewijskracht: <b>${esc(info.label)}</b></span>${confidenceBars(tip.b)}</div><p class="rationale">${esc(displayText(tip.r))}</p><details class="model-details"><summary>Bekijk modelcijfers</summary><div class="prob-row"><div class="prob-cell"><span>Thuis</span><b>${pct(fixture.p_home)}</b></div><div class="prob-cell"><span>Gelijk</span><b>${pct(fixture.p_draw)}</b></div><div class="prob-cell"><span>Uit</span><b>${pct(fixture.p_away)}</b></div><div class="prob-cell"><span>Over 2.5</span><b>${pct(fixture.p_over25)}</b></div><div class="prob-cell"><span>BTTS</span><b>${pct(fixture.p_btts)}</b></div></div></details></article>`; }
+    function renderTips(){ const fixtures=filteredFixtures(); const tips=fixtures.flatMap(fixture=>fixture.tips.map(tip=>({fixture,tip}))).sort((a,b)=>(BAND[b.tip.b]?.score||0)-(BAND[a.tip.b]?.score||0)||b.tip.p-a.tip.p||a.fixture.date.localeCompare(b.fixture.date)); const visible=state.expanded?tips:tips.slice(0,8); document.getElementById("tip-result-count").textContent=`${tips.length} ${tips.length===1?"selectie":"selecties"}`; document.getElementById("pick-grid").innerHTML=tips.length?visible.map(({fixture,tip},index)=>pickCard(fixture,tip,index)).join(""):`<div class="empty">Voor deze filters zijn geen modelselecties gevonden.</div>`; document.getElementById("more-wrap").classList.toggle("hidden",state.expanded||tips.length<=8); document.getElementById("more-button").textContent=`Toon alle ${tips.length} selecties`; }
+    function renderMatches(){ const fixtures=filteredFixtures(); const groups=[]; for(const fixture of fixtures){ let group=groups.find(g=>g.date===fixture.date); if(!group){group={date:fixture.date,fixtures:[]};groups.push(group);} group.fixtures.push(fixture); } document.getElementById("match-result-count").textContent=`${fixtures.length} ${fixtures.length===1?"wedstrijd":"wedstrijden"}`; document.getElementById("matches").innerHTML=groups.length?groups.map(group=>`<section class="match-day"><div class="match-day-head">${esc(longDate(group.date))}</div>${group.fixtures.map(f=>`<div class="match-row"><div class="match-time">${esc(f.kickoff||"—")}</div><div><div class="match-teams">${esc(teamName(f.home))}<span>—</span>${esc(teamName(f.away))}</div><div class="match-league">${esc(f.league)}</div></div><div class="match-model"><span>1 <b>${pct(f.p_home)}</b></span><span>X <b>${pct(f.p_draw)}</b></span><span>2 <b>${pct(f.p_away)}</b></span><span>O2.5 <b>${pct(f.p_over25)}</b></span></div><div class="match-tip ${f.tips.length?"":"none"}">${f.tips.length?`${f.tips.length} ${f.tips.length===1?"selectie":"selecties"}`:"Geen selectie"}</div></div>`).join("")}</section>`).join(""):`<div class="empty">Geen wedstrijden gevonden.</div>`; }
+    function renderAll(){renderTips();renderMatches();}
+    document.addEventListener("click",event=>{ const tab=event.target.closest("[data-view]"); if(tab){state.view=tab.dataset.view;document.querySelectorAll(".view-tab").forEach(el=>{el.classList.toggle("active",el===tab);el.setAttribute("aria-selected",el===tab?"true":"false");});document.getElementById("tips-view").classList.toggle("hidden",state.view!=="tips");document.getElementById("matches-view").classList.toggle("hidden",state.view!=="matches");} const chip=event.target.closest("[data-date]"); if(chip){state.date=chip.dataset.date;state.expanded=false;document.querySelectorAll(".date-chip").forEach(el=>el.classList.toggle("active",el===chip));renderAll();} });
+    document.getElementById("league-select").addEventListener("change",event=>{state.league=event.target.value;state.expanded=false;renderAll();});
+    document.getElementById("more-button").addEventListener("click",()=>{state.expanded=true;renderTips();});
+    const helpDialog=document.getElementById("help-dialog");
+    document.getElementById("open-help").addEventListener("click",()=>helpDialog.showModal());
+    document.getElementById("close-help").addEventListener("click",()=>helpDialog.close());
+    helpDialog.addEventListener("click",event=>{if(event.target===helpDialog)helpDialog.close();});
+    if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
+  </script>
+</body>
+</html>

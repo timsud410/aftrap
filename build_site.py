@@ -13,6 +13,7 @@ pagina dan een pagina met tips van vorige week zonder dat je dat ziet.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import traceback
 from datetime import date
@@ -22,6 +23,7 @@ import db as store
 
 HERE = Path(__file__).resolve().parent
 SITE = HERE / "site"
+SOCIAL_CARD = HERE / "assets" / "aftrap-og.png"
 
 # Hoeveel seizoenen we inladen. Meer is beter voor het toetsen van signalen;
 # vanaf ongeveer 2010 is de dekking van schoten en corners in de meeste
@@ -57,6 +59,8 @@ def main() -> int:
         rc = run_tips.main_with_args(out=str(SITE / "index.html"))
         if rc != 0:
             raise RuntimeError("tips genereren mislukt")
+        if SOCIAL_CARD.exists():
+            shutil.copy2(SOCIAL_CARD, SITE / "aftrap-og.png")
 
     def load_upcoming() -> None:
         api_key = os.environ.get("API_FOOTBALL_KEY", "").strip()
