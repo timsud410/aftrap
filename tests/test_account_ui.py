@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260829-4"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-4"',
+            'src="aftrap-app.js?v=20260829-5"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -84,6 +84,12 @@ class AccountUiTests(unittest.TestCase):
     def test_chance_ranking_odds_are_visible_on_light_rows(self):
         self.assertIn(".chance-row .odd-pill", self.template)
         self.assertIn("background: #f3faea; color: #29410f", self.template)
+
+    def test_chance_ranking_explains_every_model_percentage(self):
+        self.assertIn("modelReason", self.app_js)
+        self.assertIn("chance-reason", self.app_js)
+        self.assertIn("Thuiswinst ${pct1(fixture.p_home)} + gelijk", self.app_js)
+        self.assertIn("verwacht het model ${goalText(expected)} goals", self.app_js)
 
     def test_value_bet_and_auto_settlement_are_wired(self):
         self.assertIn("fairMarketProbability", self.app_js)

@@ -12,8 +12,10 @@
   const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
   const pct = value => Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 100)}%` : "—";
+  const pct1 = value => Number.isFinite(Number(value)) ? `${(Number(value) * 100).toFixed(1).replace(".", ",")}%` : "—";
   const pp = value => `${value > 0 ? "+" : ""}${(value * 100).toFixed(1).replace(".", ",")} pp`;
   const oddText = value => Number(value).toFixed(2).replace(".", ",");
+  const goalText = value => Number(value).toFixed(2).replace(".", ",");
   const teamName = value => TEAM_DISPLAY[value] || value;
   const displayText = value => Object.entries(TEAM_DISPLAY).reduce((text, [raw, nice]) => text.replaceAll(raw, nice), String(value));
   const dateObj = value => new Date(`${value}T12:00:00`);
@@ -95,9 +97,50 @@
     })).sort((a, b) => b.probability - a.probability || b.edge - a.edge || Number(b.odd.o) - Number(a.odd.o));
   }
 
+  function modelReason(fixture, key, probability) {
+    const home = Number(fixture.lambda_home);
+    const away = Number(fixture.lambda_away);
+    const total = home + away;
+    const lineLabel = value => String(value).replace(".", ",");
+    const resultName = key === "home" ? `${teamName(fixture.home)}-winst` : key === "away" ? `${teamName(fixture.away)}-winst` : "gelijkspel";
+
+    if (["home", "draw", "away"].includes(key)) {
+      return `Scoremodel: ${goalText(home)}–${goalText(away)} verwachte goals; dat geeft ${pct(probability)} kans op ${resultName}.`;
+    }
+    if (key === "home_or_draw") return `Thuiswinst ${pct1(fixture.p_home)} + gelijk ${pct1(fixture.p_draw)} = ${pct1(probability)}.`;
+    if (key === "away_or_draw") return `Uitwinst ${pct1(fixture.p_away)} + gelijk ${pct1(fixture.p_draw)} = ${pct1(probability)}.`;
+    if (key === "home_or_away") return `Thuiswinst ${pct1(fixture.p_home)} + uitwinst ${pct1(fixture.p_away)} = ${pct1(probability)} zonder gelijkspel.`;
+
+    let match = key.match(/^(over|under)_([0-9.]+)$/);
+    if (match) return `Verwachting: ${goalText(total)} goals totaal; daaruit volgt ${pct(probability)} kans op ${match[1]} ${lineLabel(match[2])}.`;
+
+    match = key.match(/^(home|away)_(over|under)_([0-9.]+)$/);
+    if (match) {
+      const expected = match[1] === "home" ? home : away;
+      const team = teamName(match[1] === "home" ? fixture.home : fixture.away);
+      return `Voor ${team} verwacht het model ${goalText(expected)} goals; daarmee ${pct(probability)} kans op ${match[2]} ${lineLabel(match[3])}.`;
+    }
+
+    if (key === "btts_yes" || key === "btts_no") {
+      const outcome = key === "btts_yes" ? "beide teams scoren" : "niet beide teams scoren";
+      return `Goalverwachting ${goalText(home)}–${goalText(away)}; daarmee ${pct(probability)} kans dat ${outcome}.`;
+    }
+
+    const firstHalfRatio = Number.isFinite(Number(fixture.first_half_ratio)) ? Number(fixture.first_half_ratio) : 0.44;
+    const firstHalfHome = home * firstHalfRatio;
+    const firstHalfAway = away * firstHalfRatio;
+    match = key.match(/^fh_(over|under)_([0-9.]+)$/);
+    if (match) return `Voor rust verwacht het model ${goalText(firstHalfHome + firstHalfAway)} goals; daarmee ${pct(probability)} kans op ${match[1]} ${lineLabel(match[2])}.`;
+    if (["fh_home", "fh_draw", "fh_away"].includes(key)) {
+      const outcome = key === "fh_home" ? `${teamName(fixture.home)} aan de leiding bij rust` : key === "fh_away" ? `${teamName(fixture.away)} aan de leiding bij rust` : "gelijk bij rust";
+      return `Rustmodel: ${goalText(firstHalfHome)}–${goalText(firstHalfAway)} verwachte goals; ${pct(probability)} kans op ${outcome}.`;
+    }
+    return `Berekend uit het scoremodel met ${goalText(home)}–${goalText(away)} verwachte goals.`;
+  }
+
   function chanceRow(item, index) {
     const { fixture, key, probability, verified } = item;
-    return `<article class="chance-row"><span class="chance-rank">#${index + 1}</span><div class="chance-fixture"><b>${esc(teamName(fixture.home))} – ${esc(teamName(fixture.away))}</b><span>${esc(shortDate(fixture.date))} · ${esc(fixture.kickoff || "tijd n.n.b.")} · ${esc(fixture.league)}</span></div><div class="chance-selection"><b>${esc(marketLabel(key, fixture))}</b><span class="${verified ? "verified-signal" : ""}">${esc(marketGroup(key))}${verified ? " · gevalideerd signaal" : " · modelmarkt"}</span></div><div class="chance-probability"><span>Modelkans</span><strong>${pct(probability)}</strong></div>${oddBlock(fixture, { key, p: probability })}<button class="chance-open" type="button" data-open-match="${esc(fixture.id)}" data-open-market="${esc(key)}">Details</button></article>`;
+    return `<article class="chance-row"><span class="chance-rank">#${index + 1}</span><div class="chance-fixture"><b>${esc(teamName(fixture.home))} – ${esc(teamName(fixture.away))}</b><span>${esc(shortDate(fixture.date))} · ${esc(fixture.kickoff || "tijd n.n.b.")} · ${esc(fixture.league)}</span></div><div class="chance-selection"><b>${esc(marketLabel(key, fixture))}</b><span class="${verified ? "verified-signal" : ""}">${esc(marketGroup(key))}${verified ? " · gevalideerd signaal" : " · modelmarkt"}</span><span class="chance-reason">${esc(modelReason(fixture, key, probability))}</span></div><div class="chance-probability"><span>Modelkans</span><strong>${pct(probability)}</strong></div>${oddBlock(fixture, { key, p: probability })}<button class="chance-open" type="button" data-open-match="${esc(fixture.id)}" data-open-market="${esc(key)}">Details</button></article>`;
   }
 
   function oddBlock(fixture, row, compact = false, bookmaker = null) {

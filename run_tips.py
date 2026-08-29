@@ -639,6 +639,7 @@ def build_day(
             "kickoff": f["kickoff"] or "",
             "home": f["home"], "away": f["away"],
             "lambda_home": round(lam, 2), "lambda_away": round(mu, 2),
+            "first_half_ratio": round(float(f["first_half_ratio"]), 3),
             "p_home": round(pred["probs"]["home"], 3),
             "p_draw": round(pred["probs"]["draw"], 3),
             "p_away": round(pred["probs"]["away"], 3),
