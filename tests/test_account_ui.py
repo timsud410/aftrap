@@ -23,8 +23,8 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260830-1"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260830-2"',
-            'src="aftrap-data.js?v=20260830-1"',
+            'src="aftrap-app.js?v=20260830-3"',
+            'src="aftrap-data.js?v=20260830-3"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -96,9 +96,21 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("combinatie handmatig afwikkelen", self.account_js)
         self.assertIn("Break-even = 1 ÷ odd", self.template)
 
+    def test_daily_top10_history_and_compact_score_feed_are_wired(self):
+        self.assertIn('id="top10-results"', self.template)
+        self.assertIn('id="score-feed"', self.template)
+        self.assertIn("RECOMMENDATION_HISTORY", self.app_js)
+        self.assertIn("historicalDailyTop10", self.app_js)
+        self.assertIn("Number(item.o) < state.minimumOdd", self.app_js)
+        self.assertIn(".slice(0, 10)", self.app_js)
+        self.assertIn("Flat-stake ROI", self.app_js)
+        self.assertIn("quickFixtureTips", self.app_js)
+        self.assertIn("score-feed-row", self.app_js)
+        self.assertIn("top10-panel", self.template)
+
     def test_generated_data_uses_external_script_before_app(self):
-        data_script = 'src="aftrap-data.js?v=20260830-1"'
-        app_script = 'src="aftrap-app.js?v=20260830-2"'
+        data_script = 'src="aftrap-data.js?v=20260830-3"'
+        app_script = 'src="aftrap-app.js?v=20260830-3"'
         self.assertLess(self.template.index(data_script), self.template.index(app_script))
         self.assertNotIn("window.AFTRAP_DATA=/*__DATA__*/[]", self.template)
 

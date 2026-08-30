@@ -2,13 +2,16 @@ import math
 import sqlite3
 import unittest
 
+import db as store
 from model import TeamRatings
 from run_tips import (
+    daily_recommendation_history,
     expectation_breakdown,
     head_to_head_profile,
     matchday_label,
     model_history_summary,
     settle,
+    store_daily_recommendations,
     team_season_profile,
     validate_dashboard_data,
 )
@@ -126,6 +129,41 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(profile["comeback_rate"], 1.0)
         self.assertEqual(profile["lead_drop_rate"], 1.0)
         self.assertEqual(head_to_head_profile(conn, 1, 2, "2026-08-30")["n"], 1)
+
+    def test_daily_recommendations_are_frozen_and_settled(self):
+        conn = store.connect(":memory:")
+        conn.execute("INSERT INTO teams (league_code,name) VALUES ('EPL','Alpha')")
+        conn.execute("INSERT INTO teams (league_code,name) VALUES ('EPL','Beta')")
+        home_id = int(conn.execute("SELECT id FROM teams WHERE name='Alpha'").fetchone()["id"])
+        away_id = int(conn.execute("SELECT id FROM teams WHERE name='Beta'").fetchone()["id"])
+        conn.execute(
+            """INSERT INTO fixtures
+               (league_code,season,match_date,kickoff,home_team_id,away_team_id,status)
+               VALUES ('EPL',2026,'2026-08-30','15:00',?,?,'NS')""",
+            (home_id, away_id),
+        )
+        fixture_id = int(conn.execute("SELECT id FROM fixtures").fetchone()["id"])
+        conn.execute(
+            "INSERT INTO fixture_external_ids VALUES ('api_football','fx-1',?)",
+            (fixture_id,),
+        )
+        fixture = {
+            "id": "fx-1", "date": "2026-08-30", "quality": 0.8,
+            "probs": {"home": 0.6, "draw": 0.2},
+            "odds": [
+                {"s": "home", "b": "Bet365", "o": 2.0},
+                {"s": "draw", "b": "Andere", "o": 4.0},
+            ],
+        }
+        self.assertEqual(store_daily_recommendations(conn, [fixture]), 1)
+        conn.execute(
+            "UPDATE fixtures SET home_goals=1,away_goals=0,home_goals_ht=0,away_goals_ht=0,status='FT' WHERE id=?",
+            (fixture_id,),
+        )
+        history = daily_recommendation_history(conn)
+        self.assertEqual(len(history), 1)
+        self.assertTrue(history[0]["hit"])
+        self.assertEqual(history[0]["o"], 2.0)
 
 
 if __name__ == "__main__":

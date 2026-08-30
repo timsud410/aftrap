@@ -177,6 +177,25 @@ CREATE TABLE IF NOT EXISTS fixture_odds_history (
 CREATE INDEX IF NOT EXISTS idx_odds_history_lookup
 ON fixture_odds_history (fixture_id, selection_key, bookmaker_id, source_updated);
 
+-- Dagelijkse aanbevelingen worden vóór de aftrap vastgezet. Daardoor kan de
+-- resultatenkaart later exact dezelfde keuzes beoordelen, zonder achteraf de
+-- huidige modelkansen over een oude speeldag heen te leggen.
+CREATE TABLE IF NOT EXISTS daily_recommendations (
+    recommendation_date TEXT NOT NULL,
+    fixture_id           INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
+    selection_key        TEXT NOT NULL,
+    bookmaker_name       TEXT NOT NULL,
+    odd                   REAL NOT NULL,
+    model_probability     REAL NOT NULL,
+    quality               REAL NOT NULL,
+    first_seen_at         TEXT NOT NULL,
+    last_seen_at          TEXT NOT NULL,
+    PRIMARY KEY (recommendation_date, fixture_id, selection_key, bookmaker_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_recommendations_date
+ON daily_recommendations (recommendation_date DESC);
+
 -- Beschikbaarheid is brondata die vlak voor de aftrap kan veranderen. JSON
 -- houdt het API-antwoord controleerbaar zonder de modeltabellen te vervuilen.
 CREATE TABLE IF NOT EXISTS fixture_availability (

@@ -95,6 +95,45 @@
     .daily-combo-numbers b { display: block; margin-top: 2px; color: #fff; font-family: var(--num); font-size: 9px; }
     .daily-combo-numbers button { border: 0; border-radius: 10px; padding: 10px 12px; background: var(--lime); color: #17220d; font-size: 8px; font-weight: 900; }
     .daily-empty { padding: 18px; border-radius: 14px; background: #f5f7fa; color: var(--muted); font-size: 11px; text-align: center; }
+    .dashboard-secondary { display: grid; grid-template-columns: minmax(300px,.8fr) minmax(0,1.2fr); gap: 12px; }
+    .top10-panel,.score-feed-panel { min-width: 0; border: 1px solid var(--line); border-radius: 19px; background: var(--paper); overflow: hidden; }
+    .compact-panel-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 15px 16px 12px; border-bottom: 1px solid var(--line); }
+    .compact-panel-head h2 { margin: 0; font-size: 15px; letter-spacing: -.03em; }
+    .compact-panel-head p { margin: 3px 0 0; color: var(--muted); font-size: 8px; }
+    .compact-panel-head > span { color: var(--blue); font-size: 8px; font-weight: 800; text-align: right; }
+    .top10-results { padding: 13px; }
+    .top10-summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+    .top10-summary > div { min-width: 0; padding: 9px; border-radius: 10px; background: #f4f7fb; }
+    .top10-summary span { display: block; color: var(--muted); font-size: 7px; }
+    .top10-summary b { display: block; margin-top: 4px; font-family: var(--num); font-size: 12px; }
+    .negative { color: #cf4d55 !important; }
+    .top10-days { margin-top: 9px; border-top: 1px solid var(--line); }
+    .top10-day { display: grid; grid-template-columns: 1fr 1fr .7fr 1fr; align-items: center; gap: 7px; padding: 8px 2px; border-bottom: 1px solid var(--line); font-size: 8px; }
+    .top10-day span { color: var(--muted); }
+    .top10-day em { color: #556274; font-family: var(--num); font-style: normal; }
+    .top10-day strong { text-align: right; }
+    .top10-note { margin: 10px 2px 0; color: var(--muted); font-size: 7px; line-height: 1.5; }
+    .top10-empty { display: grid; gap: 5px; padding: 15px; border-radius: 12px; background: #f4f7fb; }
+    .top10-empty b { font-size: 10px; }
+    .top10-empty span { color: var(--muted); font-size: 8px; line-height: 1.5; }
+    .score-feed { max-height: 390px; overflow-y: auto; }
+    .score-feed-row { display: grid; grid-template-columns: 65px minmax(0,1fr) 14px; align-items: center; gap: 10px; width: 100%; padding: 11px 13px; border: 0; border-bottom: 1px solid var(--line); background: #fff; color: var(--ink); text-align: left; }
+    .score-feed-row:last-child { border-bottom: 0; }
+    .score-feed-row:hover { background: #f8fafc; }
+    .score-feed-kickoff { display: grid; gap: 3px; justify-items: start; }
+    .score-feed-time,.score-feed-score { font-family: var(--num); font-size: 11px; }
+    .score-feed-score { color: var(--blue); }
+    .score-feed-kickoff small { overflow: hidden; max-width: 65px; color: var(--muted); font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }
+    .score-feed-main { min-width: 0; }
+    .score-feed-main > b { display: block; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .score-feed-main > b i { margin: 0 5px; color: #a0a8b5; font-style: normal; }
+    .score-feed-tips { display: flex; gap: 5px; margin-top: 6px; overflow: hidden; }
+    .score-tip { min-width: 0; padding: 5px 7px; border-radius: 8px; background: #f1f7ea; }
+    .score-tip b,.score-tip i { display: block; overflow: hidden; max-width: 150px; text-overflow: ellipsis; white-space: nowrap; }
+    .score-tip b { color: #354522; font-size: 7px; }
+    .score-tip i { margin-top: 2px; color: #6e7d5d; font-family: var(--num); font-size: 6px; font-style: normal; }
+    .score-tip-empty { color: var(--muted); font-size: 7px; }
+    .score-feed-open { color: #9aa5b4; font-size: 17px; }
     .workspace { margin-top: 18px; }
     .view-tabs { display: flex; gap: 6px; width: fit-content; padding: 5px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
     .view-tab { border: 0; border-radius: 9px; padding: 10px 16px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -310,6 +349,12 @@
       .daily-combo { grid-template-columns: 1fr; }
       .daily-combo-numbers { display: grid; grid-template-columns: 1fr 1fr; }
       .daily-combo-numbers button { grid-column: 1 / -1; }
+      .dashboard-secondary { grid-template-columns: 1fr; }
+      .top10-summary { grid-template-columns: 1fr 1fr; }
+      .score-feed { max-height: none; }
+      .score-feed-row { grid-template-columns: 52px minmax(0,1fr) 10px; padding: 11px 9px; }
+      .score-feed-tips { display: grid; grid-template-columns: 1fr; }
+      .score-tip b,.score-tip i { max-width: none; }
       .dashboard-stat small { margin-top: 7px; font-size: 8px; }
       .dashboard-stat small b { font-size: 9px; }
       .dashboard-stat small i { font-size: 8px; }
@@ -890,6 +935,10 @@
         <div class="dashboard-status"><span class="status-pill live"><i></i>Odds live</span><span class="status-pill verified" id="model-health">Rekencheck wordt uitgevoerd</span><span class="status-pill history">__HISTORY__</span></div>
       </div>
       <div class="dashboard-stats" id="dashboard-stats"></div>
+      <div class="dashboard-secondary">
+        <section class="top10-panel" aria-labelledby="top10-title"><div class="compact-panel-head"><div><h2 id="top10-title">Top 10-resultaten</h2><p>Dagelijks vooraf vastgezet en automatisch afgewikkeld.</p></div><span id="top10-threshold"></span></div><div class="top10-results" id="top10-results"></div></section>
+        <section class="score-feed-panel" aria-labelledby="score-feed-title"><div class="compact-panel-head"><div><h2 id="score-feed-title">Wedstrijden</h2><p>Programma met per duel de sterkste korte modeltips.</p></div><span id="score-feed-date"></span></div><div class="score-feed" id="score-feed"></div></section>
+      </div>
       <section class="daily-shortlist" aria-labelledby="daily-title"><div class="daily-head"><div><h2 id="daily-title">Tips van vandaag</h2><p>Maximaal drie modelsingles; alleen bij voldoende historie en actuele value. Geen bet wordt geforceerd.</p></div><span id="daily-date"></span></div><div id="daily-picks"></div></section>
     </section>
     <section class="workspace" aria-label="Voetbaltips">
@@ -1036,8 +1085,8 @@
     helpDialog.addEventListener("click",event=>{if(event.target===helpDialog)helpDialog.close();});
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
-  <script src="aftrap-data.js?v=20260830-1"></script>
-  <script src="aftrap-app.js?v=20260830-2"></script>
+  <script src="aftrap-data.js?v=20260830-3"></script>
+  <script src="aftrap-app.js?v=20260830-3"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260830-1"></script>
 </body>

@@ -731,6 +731,114 @@ def recent_settlements(conn: sqlite3.Connection, lookback_days: int = 400) -> li
     return result
 
 
+def store_daily_recommendations(
+    conn: sqlite3.Connection,
+    fixtures: list[dict],
+    bookmaker: str = "Bet365",
+) -> int:
+    """Zet alle beschikbare pre-matchselecties vast voor latere Top-10-keuze.
+
+    We bewaren bewust méér dan tien kandidaten. De browser kan dan achteraf
+    exact de tien hoogste modelkansen kiezen die boven de door de gebruiker
+    gekozen minimumodd lagen. Alleen nog niet begonnen wedstrijden worden
+    bijgewerkt; een uitslag kan de oorspronkelijke aanbeveling dus nooit
+    herschrijven.
+    """
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    written = 0
+    for fixture in fixtures:
+        external_id = str(fixture.get("id") or "")
+        if external_id.startswith("local-"):
+            fixture_id = int(external_id.removeprefix("local-"))
+        else:
+            row = conn.execute(
+                """SELECT fixture_id FROM fixture_external_ids
+                   WHERE source='api_football' AND external_id=?""",
+                (external_id,),
+            ).fetchone()
+            if not row:
+                continue
+            fixture_id = int(row["fixture_id"])
+        pending = conn.execute(
+            """SELECT 1 FROM fixtures WHERE id=? AND home_goals IS NULL
+               AND away_goals IS NULL AND status IN ('NS','TBD')""",
+            (fixture_id,),
+        ).fetchone()
+        if not pending:
+            continue
+        odds_by_key = {
+            str(item["s"]): item
+            for item in fixture.get("odds") or []
+            if item.get("s") and str(item.get("b") or "").casefold() == bookmaker.casefold()
+        }
+        for key, probability in (fixture.get("probs") or {}).items():
+            if str(key).endswith("clean_sheet") or key not in odds_by_key:
+                continue
+            odd = float(odds_by_key[key]["o"])
+            quality = float(fixture.get("quality") or 0.0)
+            conn.execute(
+                """INSERT INTO daily_recommendations
+                   (recommendation_date,fixture_id,selection_key,bookmaker_name,
+                    odd,model_probability,quality,first_seen_at,last_seen_at)
+                   VALUES (?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(recommendation_date,fixture_id,selection_key,bookmaker_name)
+                   DO UPDATE SET odd=excluded.odd,
+                                 model_probability=excluded.model_probability,
+                                 quality=excluded.quality,
+                                 last_seen_at=excluded.last_seen_at""",
+                (fixture["date"], fixture_id, key, bookmaker, odd,
+                 float(probability), quality, now, now),
+            )
+            written += 1
+    conn.commit()
+    return written
+
+
+def daily_recommendation_history(
+    conn: sqlite3.Connection,
+    lookback_days: int = 120,
+) -> list[dict]:
+    """Vastgezette aanbevelingen plus uitslag, compact voor het dashboard."""
+    cutoff = (date.today() - timedelta(days=lookback_days)).isoformat()
+    rows = conn.execute(
+        """SELECT r.recommendation_date,r.selection_key,r.bookmaker_name,
+                  r.odd,r.model_probability,r.quality,r.first_seen_at,
+                  f.home_goals,f.away_goals,f.home_goals_ht,f.away_goals_ht,
+                  th.name home,ta.name away,x.external_id
+           FROM daily_recommendations r
+           JOIN fixtures f ON f.id=r.fixture_id
+           JOIN teams th ON th.id=f.home_team_id
+           JOIN teams ta ON ta.id=f.away_team_id
+           LEFT JOIN fixture_external_ids x ON x.fixture_id=f.id
+             AND x.source='api_football'
+           WHERE r.recommendation_date>=?
+           ORDER BY r.recommendation_date DESC,r.model_probability DESC,r.odd DESC""",
+        (cutoff,),
+    ).fetchall()
+    result = []
+    for row in rows:
+        played = row["home_goals"] is not None and row["away_goals"] is not None
+        hit = settle(
+            row["selection_key"],
+            int(row["home_goals"] or 0),
+            int(row["away_goals"] or 0),
+            row["home_goals_ht"],
+            row["away_goals_ht"],
+        ) if played else None
+        result.append({
+            "d": row["recommendation_date"],
+            "id": row["external_id"] or "",
+            "h": row["home"], "a": row["away"],
+            "s": row["selection_key"], "b": row["bookmaker_name"],
+            "o": round(float(row["odd"]), 3),
+            "p": round(float(row["model_probability"]), 4),
+            "q": round(float(row["quality"]), 2),
+            "hit": hit,
+            "seen": row["first_seen_at"],
+        })
+    return result
+
+
 def fit_league_snapshot(
     conn: sqlite3.Connection, league: str, target: str, min_observations: int = 100
 ) -> tuple | None:
@@ -1036,6 +1144,10 @@ def main_with_args(
         print("\nGeen wedstrijden om te tonen. Probeer een andere datum met --date.")
         return 1
 
+    if forward:
+        stored = store_daily_recommendations(conn, fixtures)
+        print(f"  Dagelijkse aanbevelingssnapshot: {stored} Bet365-selecties bijgewerkt")
+
     integrity = validate_dashboard_data(fixtures)
     print(
         "  Integriteitscheck: "
@@ -1076,6 +1188,8 @@ def main_with_args(
         + json.dumps(fixtures, ensure_ascii=False, separators=(",", ":"))
         + ";window.AFTRAP_SETTLEMENTS="
         + json.dumps(recent_settlements(conn), ensure_ascii=False, separators=(",", ":"))
+        + ";window.AFTRAP_RECOMMENDATION_HISTORY="
+        + json.dumps(daily_recommendation_history(conn), ensure_ascii=False, separators=(",", ":"))
         + ";\n"
     )
     (out.parent / "aftrap-data.js").write_text(data_js, encoding="utf-8")

@@ -2,6 +2,7 @@
   "use strict";
 
   const DATA = window.AFTRAP_DATA || [];
+  const RECOMMENDATION_HISTORY = window.AFTRAP_RECOMMENDATION_HISTORY || [];
   const BAND = {
     high: { score: 4, label: "sterk", bars: 3 },
     medium: { score: 3, label: "goed onderbouwd", bars: 2 },
@@ -198,6 +199,83 @@
       usedFixtures.add(String(choice.fixture.id));
       return [choice];
     }).slice(0, 3);
+  }
+
+  function historicalDailyTop10() {
+    const grouped = new Map();
+    for (const item of RECOMMENDATION_HISTORY) {
+      if (Number(item.q || 0) < RANKING_MIN_QUALITY || Number(item.o) < state.minimumOdd) continue;
+      if (!grouped.has(item.d)) grouped.set(item.d, []);
+      grouped.get(item.d).push(item);
+    }
+    return [...grouped.entries()].map(([day, rows]) => {
+      const selected = rows.sort((a, b) => Number(b.p) - Number(a.p) || (Number(b.p) * Number(b.o)) - (Number(a.p) * Number(a.o)) || Number(b.o) - Number(a.o)).slice(0, 10);
+      const settled = selected.filter(item => item.hit != null);
+      const hits = settled.filter(item => item.hit === true).length;
+      const profit = settled.reduce((total, item) => total + (item.hit ? Number(item.o) - 1 : -1), 0);
+      return { day, selected, settled, hits, profit, roi: settled.length ? profit / settled.length : null };
+    }).filter(day => day.selected.length && day.settled.length === day.selected.length).sort((a, b) => b.day.localeCompare(a.day));
+  }
+
+  function renderTop10History() {
+    const root = document.getElementById("top10-results");
+    const threshold = document.getElementById("top10-threshold");
+    if (!root || !threshold) return;
+    threshold.textContent = `Bet365 · minimum @${oddText(state.minimumOdd)}`;
+    const days = historicalDailyTop10();
+    if (!days.length) {
+      root.innerHTML = `<div class="top10-empty"><b>De dagelijkse meting start nu</b><span>De aanbevelingen worden vóór de aftrap vastgezet. Zodra de eerste speeldag volledig is afgelopen, verschijnen hier goed/fout, hitrate en flat-stake ROI.</span></div>`;
+      return;
+    }
+    const all = days.flatMap(day => day.settled);
+    const totalHits = all.filter(item => item.hit === true).length;
+    const totalProfit = days.reduce((total, day) => total + day.profit, 0);
+    const summary = `<div class="top10-summary"><div><span>Afgewikkeld</span><b>${all.length}</b></div><div><span>Goed</span><b>${totalHits}</b></div><div><span>Hitrate</span><b>${pct1(totalHits / all.length)}</b></div><div><span>Flat-stake ROI</span><b class="${totalProfit >= 0 ? "positive" : "negative"}">${signedPercent(totalProfit / all.length)}</b></div></div>`;
+    const rows = days.slice(0, 7).map(day => `<div class="top10-day"><span>${esc(shortDate(day.day))}</span><b>${day.hits}/${day.settled.length} goed</b><em>${pct1(day.hits / day.settled.length)}</em><strong class="${day.profit >= 0 ? "positive" : "negative"}">${day.roi == null ? "—" : signedPercent(day.roi)} ROI</strong></div>`).join("");
+    root.innerHTML = `${summary}<div class="top10-days">${rows}</div><p class="top10-note">Elke selectie telt als één vaste eenheid inzet. De Top 10 wordt per dag opnieuw bepaald uit de vóór de aftrap opgeslagen kandidaten boven jouw huidige minimumodd; daardoor rekenen we niet achteraf met nieuwe kansen.</p>`;
+  }
+
+  function quickFixtureTips(fixture) {
+    const groups = [
+      key => ["home", "draw", "away"].includes(key),
+      key => /^(over|under)_/.test(key),
+      key => ["btts_yes", "btts_no"].includes(key),
+    ];
+    return groups.flatMap(matches => {
+      const choices = Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
+        if (!matches(key)) return [];
+        const odd = selectedOdd(fixture, key);
+        const probability = Number(rawProbability);
+        if (!odd || Number(odd.o) < state.minimumOdd || !Number.isFinite(probability)) return [];
+        return [{ key, probability, odd }];
+      }).sort((a, b) => b.probability - a.probability || Number(b.odd.o) - Number(a.odd.o));
+      return choices.slice(0, 1);
+    }).sort((a, b) => b.probability - a.probability).slice(0, 3);
+  }
+
+  function scoreFeedFixtures() {
+    let pool = DATA.filter(fixture => state.league === "all" || fixture.league === state.league);
+    let focusDate = state.date;
+    if (focusDate === "all") {
+      const today = localTodayKey();
+      const dates = [...new Set(pool.map(fixture => fixture.date))].sort();
+      focusDate = dates.includes(today) ? today : dates.find(day => day > today) || dates[0];
+    }
+    return { focusDate, fixtures: pool.filter(fixture => fixture.date === focusDate).sort((a, b) => String(a.kickoff || "99:99").localeCompare(String(b.kickoff || "99:99")) || a.league.localeCompare(b.league)) };
+  }
+
+  function renderScoreFeed() {
+    const root = document.getElementById("score-feed");
+    const dateLabel = document.getElementById("score-feed-date");
+    if (!root || !dateLabel) return;
+    const { focusDate, fixtures } = scoreFeedFixtures();
+    dateLabel.textContent = focusDate ? longDate(focusDate) : "Geen programma";
+    root.innerHTML = fixtures.length ? fixtures.map(fixture => {
+      const tips = quickFixtureTips(fixture);
+      const score = fixture.score ? `<strong class="score-feed-score">${esc(fixture.score)}</strong>` : `<strong class="score-feed-time">${esc(fixture.kickoff || "—")}</strong>`;
+      const tipLine = tips.length ? tips.map(item => `<span class="score-tip"><b>${esc(marketLabel(item.key, fixture))}</b><i>${pct1(item.probability)} · @${oddText(item.odd.o)}</i></span>`).join("") : `<span class="score-tip-empty">Geen actuele tip boven @${oddText(state.minimumOdd)}</span>`;
+      return `<button class="score-feed-row" type="button" data-open-match="${esc(fixture.id)}"><span class="score-feed-kickoff">${score}<small>${esc(fixture.league)}</small></span><span class="score-feed-main"><b>${esc(teamName(fixture.home))}<i>–</i>${esc(teamName(fixture.away))}</b><span class="score-feed-tips">${tipLine}</span></span><span class="score-feed-open">›</span></button>`;
+    }).join("") : `<div class="daily-empty">Geen wedstrijden voor deze datum en competitie.</div>`;
   }
 
   function renderDailyPicks() {
@@ -560,7 +638,7 @@
     if (currentDailyCombo) window.AftrapAccount?.openFromCombo(currentDailyCombo);
   }
 
-  function renderAll() { renderTips(); renderMatches(); renderDailyPicks(); }
+  function renderAll() { renderTips(); renderMatches(); renderDailyPicks(); renderTop10History(); renderScoreFeed(); }
 
   document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", event => {
