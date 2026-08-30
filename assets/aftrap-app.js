@@ -48,6 +48,8 @@
   };
   const shortDate = value => new Intl.DateTimeFormat("nl-NL", { weekday: "short", day: "numeric", month: "short" }).format(dateObj(value));
   const longDate = value => new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long" }).format(dateObj(value));
+  const fixtureStart = fixture => new Date(`${fixture.date}T${fixture.kickoff || "23:59"}:00`);
+  const isPreMatch = fixture => !fixture.score && fixtureStart(fixture).getTime() > Date.now();
   const relativeDate = value => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
@@ -144,7 +146,7 @@
   }
 
   function rankedSelections() {
-    const ranking = filteredFixtures().flatMap(fixture => Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
+    const ranking = filteredFixtures().filter(isPreMatch).flatMap(fixture => Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
       if (key.endsWith("clean_sheet")) return [];
       if (state.market !== "all" && marketGroup(key) !== state.market) return [];
       const probability = Number(rawProbability);
@@ -168,7 +170,7 @@
 
   function dailySelections() {
     const today = localTodayKey();
-    const candidates = DATA.filter(fixture => fixture.date === today).flatMap(fixture => {
+    const candidates = DATA.filter(fixture => fixture.date === today && isPreMatch(fixture)).flatMap(fixture => {
       const effective = fixture.effective_matches || {};
       const enoughHistory = Number(fixture.quality || 0) >= DASHBOARD_MIN_QUALITY
         && Math.min(Number(effective.home ?? 0), Number(effective.away ?? 0)) >= DASHBOARD_MIN_EFFECTIVE_MATCHES;
@@ -204,16 +206,20 @@
   function historicalDailyTop10() {
     const grouped = new Map();
     for (const item of RECOMMENDATION_HISTORY) {
+      if (item.snapshot_minimum != null && Math.abs(Number(item.snapshot_minimum) - state.minimumOdd) > 0.0001) continue;
       if (Number(item.q || 0) < RANKING_MIN_QUALITY || Number(item.o) < state.minimumOdd) continue;
       if (!grouped.has(item.d)) grouped.set(item.d, []);
       grouped.get(item.d).push(item);
     }
     return [...grouped.entries()].map(([day, rows]) => {
-      const selected = rows.sort((a, b) => Number(b.p) - Number(a.p) || (Number(b.p) * Number(b.o)) - (Number(a.p) * Number(a.o)) || Number(b.o) - Number(a.o)).slice(0, 10);
+      const recovered = rows.some(item => item.recovered === true);
+      const selected = recovered
+        ? rows.sort((a, b) => Number(a.rank) - Number(b.rank)).slice(0, 10)
+        : rows.sort((a, b) => Number(b.p) - Number(a.p) || (Number(b.p) * Number(b.o)) - (Number(a.p) * Number(a.o)) || Number(b.o) - Number(a.o)).slice(0, 10);
       const settled = selected.filter(item => item.hit != null);
       const hits = settled.filter(item => item.hit === true).length;
       const profit = settled.reduce((total, item) => total + (item.hit ? Number(item.o) - 1 : -1), 0);
-      return { day, selected, settled, hits, profit, roi: settled.length ? profit / settled.length : null };
+      return { day, selected, settled, hits, profit, roi: settled.length ? profit / settled.length : null, recovered };
     }).filter(day => day.selected.length && day.settled.length === day.selected.length).sort((a, b) => b.day.localeCompare(a.day));
   }
 
@@ -231,8 +237,8 @@
     const totalHits = all.filter(item => item.hit === true).length;
     const totalProfit = days.reduce((total, day) => total + day.profit, 0);
     const summary = `<div class="top10-summary"><div><span>Afgewikkeld</span><b>${all.length}</b></div><div><span>Goed</span><b>${totalHits}</b></div><div><span>Hitrate</span><b>${pct1(totalHits / all.length)}</b></div><div><span>Flat-stake ROI</span><b class="${totalProfit >= 0 ? "positive" : "negative"}">${signedPercent(totalProfit / all.length)}</b></div></div>`;
-    const rows = days.slice(0, 7).map(day => `<div class="top10-day"><span>${esc(shortDate(day.day))}</span><b>${day.hits}/${day.settled.length} goed</b><em>${pct1(day.hits / day.settled.length)}</em><strong class="${day.profit >= 0 ? "positive" : "negative"}">${day.roi == null ? "—" : signedPercent(day.roi)} ROI</strong></div>`).join("");
-    root.innerHTML = `${summary}<div class="top10-days">${rows}</div><p class="top10-note">Elke selectie telt als één vaste eenheid inzet. De Top 10 wordt per dag opnieuw bepaald uit de vóór de aftrap opgeslagen kandidaten boven jouw huidige minimumodd; daardoor rekenen we niet achteraf met nieuwe kansen.</p>`;
+    const rows = days.slice(0, 7).map(day => `<div class="top10-day"><span>${esc(shortDate(day.day))}${day.recovered ? " · hersteld archief" : ""}</span><b>${day.hits}/${day.settled.length} goed</b><em>${pct1(day.hits / day.settled.length)}</em><strong class="${day.profit >= 0 ? "positive" : "negative"}">${day.roi == null ? "—" : signedPercent(day.roi)} ROI</strong></div>`).join("");
+    root.innerHTML = `${summary}<div class="top10-days">${rows}</div><p class="top10-note">Elke selectie telt als één vaste eenheid inzet. De Top 10 wordt per dag bepaald uit vóór de aftrap opgeslagen kandidaten. De meting van 30 augustus is exact hersteld uit het gepubliceerde archief bij minimumodd @1,30; begonnen wedstrijden zijn uitgesloten.</p>`;
   }
 
   function quickFixtureTips(fixture) {
