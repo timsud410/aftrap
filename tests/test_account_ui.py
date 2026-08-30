@@ -24,6 +24,7 @@ class AccountUiTests(unittest.TestCase):
             'src="aftrap-account.js?v=20260830-1"',
             'href="aftrap-account.css"',
             'src="aftrap-app.js?v=20260830-1"',
+            'src="aftrap-data.js?v=20260830-1"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -94,6 +95,12 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("openFromCombo", self.account_js)
         self.assertIn("combinatie handmatig afwikkelen", self.account_js)
         self.assertIn("Break-even = 1 ÷ odd", self.template)
+
+    def test_generated_data_uses_external_script_before_app(self):
+        data_script = 'src="aftrap-data.js?v=20260830-1"'
+        app_script = 'src="aftrap-app.js?v=20260830-1"'
+        self.assertLess(self.template.index(data_script), self.template.index(app_script))
+        self.assertNotIn("window.AFTRAP_DATA=/*__DATA__*/[]", self.template)
 
     def test_minimum_odd_ranking_is_wired(self):
         self.assertIn('id="minimum-odd"', self.template)
@@ -190,7 +197,7 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("openFromTip", self.account_js)
         self.assertIn("autoSettleBets", self.account_js)
         self.assertIn("clv_percent", self.account_js)
-        self.assertIn("AFTRAP_SETTLEMENTS", self.template)
+        self.assertIn("AFTRAP_SETTLEMENTS", self.account_js)
 
     def test_account_module_uses_explicit_shared_data(self):
         self.assertIn("window.AFTRAP_DATA", self.account_js)

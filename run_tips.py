@@ -929,17 +929,24 @@ def main_with_args(
     if history_start:
         history_label += f" sinds {history_start}"
     html = TEMPLATE.read_text(encoding="utf-8").replace(
-        "/*__DATA__*/[]",
-        json.dumps(fixtures, ensure_ascii=False, separators=(",", ":")),
-    ).replace(
-        "/*__SETTLEMENTS__*/[]",
-        json.dumps(recent_settlements(conn), ensure_ascii=False, separators=(",", ":")),
-    ).replace("__MATCHDAY__", display_matchday).replace(
+        "__MATCHDAY__", display_matchday).replace(
         "__GENERATED__", datetime.now().strftime("%d-%m-%Y %H:%M")).replace(
         "__HISTORY__", history_label)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    # Houd de grote, iedere drie uur wisselende dataset buiten de HTML. Een
+    # inline script kan door browserbeveiliging worden geweigerd; dan laadt de
+    # interface wel, maar ziet zij ten onrechte nul wedstrijden en nul odds.
+    # Als normaal extern script is de data vóór aftrap-app.js beschikbaar.
+    data_js = (
+        "window.AFTRAP_DATA="
+        + json.dumps(fixtures, ensure_ascii=False, separators=(",", ":"))
+        + ";window.AFTRAP_SETTLEMENTS="
+        + json.dumps(recent_settlements(conn), ensure_ascii=False, separators=(",", ":"))
+        + ";\n"
+    )
+    (out.parent / "aftrap-data.js").write_text(data_js, encoding="utf-8")
     out.write_text(html, encoding="utf-8")
     print(f"\n  Dashboard: {out.resolve()}\n")
     if args.do_open:
