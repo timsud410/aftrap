@@ -121,6 +121,8 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("rankedSelections", self.app_js)
         self.assertIn("b.probability - a.probability", self.app_js)
         self.assertIn("Number(odd.o) < state.minimumOdd", self.app_js)
+        self.assertIn("filter(isPreMatch)", self.app_js)
+        self.assertIn("fixture.date === today && isPreMatch(fixture)", self.app_js)
 
     def test_chance_ranking_odds_are_visible_on_light_rows(self):
         self.assertIn(".chance-row .odd-pill", self.template)
