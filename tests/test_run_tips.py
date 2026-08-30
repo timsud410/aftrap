@@ -5,9 +5,11 @@ import unittest
 from model import TeamRatings
 from run_tips import (
     expectation_breakdown,
+    head_to_head_profile,
     matchday_label,
     model_history_summary,
     settle,
+    team_season_profile,
     validate_dashboard_data,
 )
 
@@ -98,6 +100,32 @@ class SettlementTests(unittest.TestCase):
             model_history_summary(conn, "2026-08-29"),
             {"matches": 1, "first_date": "2020-08-01"},
         )
+
+    def test_season_and_comeback_context_is_causal(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.executescript(
+            """
+            CREATE TABLE fixtures (
+                id INTEGER PRIMARY KEY, league_code TEXT, season INTEGER,
+                match_date TEXT, home_team_id INTEGER, away_team_id INTEGER,
+                home_goals INTEGER, away_goals INTEGER,
+                home_goals_ht INTEGER, away_goals_ht INTEGER
+            );
+            INSERT INTO fixtures VALUES
+                (1,'EPL',2026,'2026-08-01',1,3,2,1,0,1),
+                (2,'EPL',2026,'2026-08-10',1,3,1,1,1,0),
+                (3,'EPL',2025,'2026-05-01',1,2,1,0,0,0),
+                (4,'EPL',2026,'2026-08-30',1,2,9,0,5,0);
+            """
+        )
+        profile = team_season_profile(conn, 1, "EPL", 2026, "2026-08-30")
+        self.assertEqual(profile["n"], 2)
+        self.assertEqual(profile["ppg"], 2.0)
+        self.assertEqual(profile["behind_ht_rate"], 0.5)
+        self.assertEqual(profile["comeback_rate"], 1.0)
+        self.assertEqual(profile["lead_drop_rate"], 1.0)
+        self.assertEqual(head_to_head_profile(conn, 1, 2, "2026-08-30")["n"], 1)
 
 
 if __name__ == "__main__":

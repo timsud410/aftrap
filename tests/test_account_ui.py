@@ -23,7 +23,7 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260830-1"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260830-1"',
+            'src="aftrap-app.js?v=20260830-2"',
             'src="aftrap-data.js?v=20260830-1"',
             'id="match-dialog"',
         ):
@@ -98,7 +98,7 @@ class AccountUiTests(unittest.TestCase):
 
     def test_generated_data_uses_external_script_before_app(self):
         data_script = 'src="aftrap-data.js?v=20260830-1"'
-        app_script = 'src="aftrap-app.js?v=20260830-1"'
+        app_script = 'src="aftrap-app.js?v=20260830-2"'
         self.assertLess(self.template.index(data_script), self.template.index(app_script))
         self.assertNotIn("window.AFTRAP_DATA=/*__DATA__*/[]", self.template)
 
@@ -124,6 +124,16 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("chance-reason", self.app_js)
         self.assertIn("Thuiswinst ${pct1(fixture.p_home)} + gelijk", self.app_js)
         self.assertIn("verwacht het model ${goalText(expected)} goals", self.app_js)
+
+    def test_match_detail_exposes_causal_season_and_comeback_context(self):
+        self.assertIn("contextBlock", self.app_js)
+        self.assertIn("Seizoen & wedstrijdverloop", self.app_js)
+        self.assertIn("Achter bij rust", self.app_js)
+        self.assertIn("Teruggekomen", self.app_js)
+        self.assertIn("Voorsprong weg", self.app_js)
+        self.assertIn("Historie in dit stadion", self.app_js)
+        self.assertIn("walk-forwardtest", self.app_js)
+        self.assertIn(".context-grid", self.template)
 
     def test_mobile_dashboard_has_app_layout_and_live_statistics(self):
         self.assertIn("viewport-fit=cover", self.template)

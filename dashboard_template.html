@@ -246,6 +246,17 @@
     .team-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .team-form-grid > div { display: grid; grid-template-columns: 1.2fr repeat(3,1fr); gap: 8px; padding: 11px; border-radius: 10px; background: #f5f7f8; font-size: 9px; }
     .team-form-grid span { color: var(--muted); text-align: right; }
+    .context-section { display: grid; gap: 12px; }
+    .context-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .context-team { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; }
+    .context-team-head { display: flex; justify-content: space-between; gap: 10px; font-size: 10px; }
+    .context-team-head span { color: var(--muted); font-size: 8px; }
+    .context-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-top: 10px; }
+    .context-metrics > div { padding: 8px; border-radius: 9px; background: #fff; }
+    .context-metrics span,.context-metrics small,.context-h2h span { display: block; color: var(--muted); font-size: 7px; }
+    .context-metrics b,.context-h2h b { display: block; margin: 3px 0; font-family: var(--num); font-size: 10px; }
+    .context-h2h { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; padding: 11px; border-radius: 11px; background: #eef5ff; }
+    .context-note { margin: 0; color: var(--muted); font-size: 8px; line-height: 1.55; }
     .market-group > b { display: block; margin-bottom: 7px; color: var(--muted); font-size: 8px; text-transform: uppercase; }
     .market-chip-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
     .market-chip { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fafbfb; color: inherit; text-align: left; }
@@ -331,8 +342,10 @@
       .match-row { grid-template-columns: 44px minmax(0,1fr); }
       .match-tip { display: none; }
       .match-dialog-body { padding: 12px; }
-      .match-overview,.availability-grid,.team-form-grid { grid-template-columns: 1fr; }
+      .match-overview,.availability-grid,.team-form-grid,.context-grid { grid-template-columns: 1fr; }
       .team-form-grid > div { grid-template-columns: 1fr 1fr; }
+      .context-metrics { grid-template-columns: 1fr 1fr; }
+      .context-h2h { grid-template-columns: 1fr; }
       .market-chip-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
       .odds-compare-row { grid-template-columns: minmax(100px,1fr) repeat(2,60px); }
       .odds-compare-row > div:nth-child(4) { display: none; }
@@ -1024,7 +1037,7 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script src="aftrap-data.js?v=20260830-1"></script>
-  <script src="aftrap-app.js?v=20260830-1"></script>
+  <script src="aftrap-app.js?v=20260830-2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260830-1"></script>
 </body>

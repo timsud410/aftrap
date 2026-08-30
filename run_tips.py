@@ -210,6 +210,136 @@ def team_form(
     }
 
 
+def _summarise_team_results(rows: list[sqlite3.Row], team_id: int) -> dict:
+    """Vat uitsluitend reeds gespeelde duels samen vanuit het teamperspectief.
+
+    Comeback betekent hier: bij rust achter, maar bij het laatste fluitsignaal
+    minimaal gelijk. Voor minuut-tot-minuut-comebacks is later event-data nodig.
+    """
+    played = len(rows)
+    if not played:
+        return {
+            "n": 0, "ppg": None, "gf": None, "ga": None,
+            "behind_ht_rate": None, "comeback_rate": None,
+            "lead_drop_rate": None, "last5_ppg": None,
+        }
+    points: list[int] = []
+    goals_for: list[int] = []
+    goals_against: list[int] = []
+    behind = comebacks = leading = leads_dropped = 0
+    for row in rows:
+        home = int(row["home_team_id"]) == team_id
+        gf = int(row["home_goals"] if home else row["away_goals"])
+        ga = int(row["away_goals"] if home else row["home_goals"])
+        goals_for.append(gf)
+        goals_against.append(ga)
+        points.append(3 if gf > ga else 1 if gf == ga else 0)
+        home_ht, away_ht = row["home_goals_ht"], row["away_goals_ht"]
+        if home_ht is None or away_ht is None:
+            continue
+        gf_ht = int(home_ht if home else away_ht)
+        ga_ht = int(away_ht if home else home_ht)
+        if gf_ht < ga_ht:
+            behind += 1
+            comebacks += int(gf >= ga)
+        elif gf_ht > ga_ht:
+            leading += 1
+            leads_dropped += int(gf <= ga)
+    known_ht = sum(
+        row["home_goals_ht"] is not None and row["away_goals_ht"] is not None
+        for row in rows
+    )
+    return {
+        "n": played,
+        "ppg": round(statistics.fmean(points), 3),
+        "gf": round(statistics.fmean(goals_for), 3),
+        "ga": round(statistics.fmean(goals_against), 3),
+        "behind_ht_rate": round(behind / known_ht, 3) if known_ht else None,
+        "comeback_rate": round(comebacks / behind, 3) if behind else None,
+        "lead_drop_rate": round(leads_dropped / leading, 3) if leading else None,
+        "last5_ppg": round(statistics.fmean(points[:5]), 3),
+    }
+
+
+def team_season_profile(
+    conn: sqlite3.Connection,
+    team_id: int,
+    league: str,
+    season: int,
+    cutoff: str,
+    venue: str | None = None,
+) -> dict:
+    """Causaal seizoensprofiel; de fixture op de cutoff-datum telt nooit mee."""
+    venue_sql = ""
+    params: list = [league, season, cutoff, team_id, team_id]
+    if venue == "home":
+        venue_sql = " AND f.home_team_id = ?"
+        params.append(team_id)
+    elif venue == "away":
+        venue_sql = " AND f.away_team_id = ?"
+        params.append(team_id)
+    rows = conn.execute(
+        """SELECT f.home_team_id,f.away_team_id,f.home_goals,f.away_goals,
+                  f.home_goals_ht,f.away_goals_ht,f.match_date
+           FROM fixtures f
+           WHERE f.league_code=? AND f.season=? AND f.match_date<?
+             AND f.home_goals IS NOT NULL AND f.away_goals IS NOT NULL
+             AND (f.home_team_id=? OR f.away_team_id=?)"""
+        + venue_sql
+        + " ORDER BY f.match_date DESC, f.id DESC",
+        params,
+    ).fetchall()
+    return _summarise_team_results(rows, team_id)
+
+
+def head_to_head_profile(
+    conn: sqlite3.Connection,
+    home_team_id: int,
+    away_team_id: int,
+    cutoff: str,
+    limit: int = 8,
+) -> dict:
+    """Eerdere ontmoetingen in exact dit stadion, nooit toekomstige duels."""
+    rows = conn.execute(
+        """SELECT home_goals,away_goals,match_date
+           FROM fixtures
+           WHERE home_team_id=? AND away_team_id=? AND match_date<?
+             AND home_goals IS NOT NULL AND away_goals IS NOT NULL
+           ORDER BY match_date DESC, id DESC LIMIT ?""",
+        (home_team_id, away_team_id, cutoff, limit),
+    ).fetchall()
+    n = len(rows)
+    if not n:
+        return {"n": 0, "home_win_rate": None, "draw_rate": None, "away_win_rate": None, "avg_goals": None}
+    home_wins = sum(int(row["home_goals"] > row["away_goals"]) for row in rows)
+    draws = sum(int(row["home_goals"] == row["away_goals"]) for row in rows)
+    return {
+        "n": n,
+        "home_win_rate": round(home_wins / n, 3),
+        "draw_rate": round(draws / n, 3),
+        "away_win_rate": round((n - home_wins - draws) / n, 3),
+        "avg_goals": round(statistics.fmean(int(row["home_goals"]) + int(row["away_goals"]) for row in rows), 3),
+    }
+
+
+def match_context_profile(conn: sqlite3.Connection, fixture: sqlite3.Row, cutoff: str) -> dict:
+    """Seizoen, locatie en onderlinge historie zoals bekend vóór de aftrap."""
+    home_id, away_id = int(fixture["home_team_id"]), int(fixture["away_team_id"])
+    league, season = fixture["league_code"], int(fixture["season"])
+    return {
+        "home": {
+            "season": team_season_profile(conn, home_id, league, season, cutoff),
+            "venue": team_season_profile(conn, home_id, league, season, cutoff, "home"),
+        },
+        "away": {
+            "season": team_season_profile(conn, away_id, league, season, cutoff),
+            "venue": team_season_profile(conn, away_id, league, season, cutoff, "away"),
+        },
+        "h2h_venue": head_to_head_profile(conn, home_id, away_id, cutoff),
+        "definition": "achter/comeback en voorsprong weggegeven worden gemeten van rust naar eindstand",
+    }
+
+
 def player_shot_form(
     conn: sqlite3.Connection,
     team_id: int,
@@ -770,6 +900,7 @@ def build_day(
 
         odds, odds_history = _fixture_odds(conn, int(f["id"]))
         availability = _fixture_availability(conn, int(f["id"]))
+        context = match_context_profile(conn, f, cutoff)
 
         out.append({
             "league": f["league"], "league_code": f["league_code"],
@@ -797,6 +928,7 @@ def build_day(
                 for side, factors in analysis["expectation"].items()
             },
             "form": analysis["form"],
+            "context": context,
             "score": f"{hg}-{ag}" if played else None,
             "players": players,
             "odds": odds,
