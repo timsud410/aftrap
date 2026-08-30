@@ -23,8 +23,8 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260830-1"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260830-3"',
-            'src="aftrap-data.js?v=20260830-3"',
+            'src="aftrap-app.js?v=20260830-4"',
+            'src="aftrap-data.js?v=20260830-4"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -109,8 +109,8 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("top10-panel", self.template)
 
     def test_generated_data_uses_external_script_before_app(self):
-        data_script = 'src="aftrap-data.js?v=20260830-3"'
-        app_script = 'src="aftrap-app.js?v=20260830-3"'
+        data_script = 'src="aftrap-data.js?v=20260830-4"'
+        app_script = 'src="aftrap-app.js?v=20260830-4"'
         self.assertLess(self.template.index(data_script), self.template.index(app_script))
         self.assertNotIn("window.AFTRAP_DATA=/*__DATA__*/[]", self.template)
 
