@@ -69,6 +69,32 @@
     .dashboard-stat small b { display: block; overflow: hidden; color: #465162; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
     .dashboard-stat small i { display: -webkit-box; margin-top: 4px; overflow: hidden; color: #6a7584; font-size: 9px; font-style: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
     .dashboard-stat small em { display: block; margin-top: 4px; color: #557b2f; font-size: 8px; font-style: normal; }
+    .daily-shortlist { display: grid; gap: 13px; margin-top: 6px; padding: 18px; border: 1px solid var(--line); border-radius: 22px; background: var(--paper); }
+    .daily-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+    .daily-head h2 { margin: 0; font-size: 19px; letter-spacing: -.035em; }
+    .daily-head p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+    .daily-head > span { color: var(--blue); font-size: 10px; font-weight: 800; }
+    .daily-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+    .daily-pick { min-width: 0; padding: 15px; border: 1px solid #e2e7ee; border-radius: 16px; background: #f9fafc; }
+    .daily-pick-head { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+    .daily-pick-head b { color: var(--blue); font-family: var(--num); font-size: 14px; }
+    .daily-pick h3 { margin: 11px 0 4px; font-size: 14px; }
+    .daily-fixture,.daily-reason { margin: 0; color: var(--muted); font-size: 9px; font-weight: 650; line-height: 1.5; }
+    .daily-reason { min-height: 41px; margin-top: 8px; color: #536174; }
+    .daily-metrics { display: flex; gap: 7px; margin: 10px 0; }
+    .daily-metrics span { flex: 1; padding: 7px; border-radius: 9px; background: #eef2f7; color: #7a8595; font-size: 8px; }
+    .daily-metrics b { display: block; margin-top: 2px; color: #344054; font-family: var(--num); font-size: 10px; }
+    .daily-pick .odd-pill { width: 100%; }
+    .daily-detail { width: 100%; margin-top: 7px; border: 0; background: transparent; color: var(--blue); font-size: 9px; font-weight: 800; }
+    .daily-combo { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 18px; padding: 14px 16px; border-radius: 16px; background: #101927; color: #fff; }
+    .daily-combo > div > span { color: #9db0c6; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+    .daily-combo h3 { margin: 6px 0; font-size: 11px; line-height: 1.65; }
+    .daily-combo p { margin: 0; color: #8ea0b5; font-size: 8px; }
+    .daily-combo-numbers { display: flex; align-items: center; gap: 7px; }
+    .daily-combo-numbers span { padding: 7px 9px; border-radius: 9px; background: rgba(255,255,255,.07); color: #91a3b8; font-size: 7px; }
+    .daily-combo-numbers b { display: block; margin-top: 2px; color: #fff; font-family: var(--num); font-size: 9px; }
+    .daily-combo-numbers button { border: 0; border-radius: 10px; padding: 10px 12px; background: var(--lime); color: #17220d; font-size: 8px; font-weight: 900; }
+    .daily-empty { padding: 18px; border-radius: 14px; background: #f5f7fa; color: var(--muted); font-size: 11px; text-align: center; }
     .workspace { margin-top: 18px; }
     .view-tabs { display: flex; gap: 6px; width: fit-content; padding: 5px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
     .view-tab { border: 0; border-radius: 9px; padding: 10px 16px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -269,6 +295,10 @@
       .dashboard-stats { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
       .dashboard-stat { min-height: 132px; padding: 13px; }
       .dashboard-stat strong { font-size: 22px; }
+      .daily-grid { grid-template-columns: 1fr; }
+      .daily-combo { grid-template-columns: 1fr; }
+      .daily-combo-numbers { display: grid; grid-template-columns: 1fr 1fr; }
+      .daily-combo-numbers button { grid-column: 1 / -1; }
       .dashboard-stat small { margin-top: 7px; font-size: 8px; }
       .dashboard-stat small b { font-size: 9px; }
       .dashboard-stat small i { font-size: 8px; }
@@ -847,6 +877,7 @@
         <div class="dashboard-status"><span class="status-pill live"><i></i>Odds live</span><span class="status-pill verified" id="model-health">Rekencheck wordt uitgevoerd</span><span class="status-pill history">__HISTORY__</span></div>
       </div>
       <div class="dashboard-stats" id="dashboard-stats"></div>
+      <section class="daily-shortlist" aria-labelledby="daily-title"><div class="daily-head"><div><h2 id="daily-title">Tips van vandaag</h2><p>Maximaal drie modelsingles; alleen bij voldoende historie en actuele value. Geen bet wordt geforceerd.</p></div><span id="daily-date"></span></div><div id="daily-picks"></div></section>
     </section>
     <section class="workspace" aria-label="Voetbaltips">
       <nav class="view-tabs" aria-label="Weergave" role="tablist">
@@ -915,6 +946,8 @@
         <div class="how-step"><b>Lees de drie regels als één modelbeeld</b><p>De hoofdselectie komt uit een historisch getoetst signaal. Fulltime en BTTS zijn aanvullende modelmarkten; dat is geen bewijs van winstgevendheid.</p></div>
         <div class="how-step"><b>Open de cijfers als je alles wilt zien</b><p>Onder iedere wedstrijd staan alle 1X2-, Over/Under-, BTTS- en verwachte-goalscijfers, plus recente schotvorm van spelers als die beschikbaar is.</p></div>
         <div class="how-step"><b>Lees value als verwachte waarde</b><p>EV = modelkans × aangeboden odd − 1. +8% EV betekent theoretisch € 0,08 verwachte opbrengst per ingezette euro; het blijft een modelschatting, geen garantie.</p></div>
+        <div class="how-step"><b>Break-even is de minimale benodigde trefkans</b><p>Break-even = 1 ÷ odd. Bij odd 2,00 is dat 50%; bij 1,50 is dat 66,7%. Alleen als de modelkans hoger ligt, is de berekende EV positief.</p></div>
+        <div class="how-step"><b>De dagselectie forceert niets</b><p>Aftrap kiest maximaal één winnaar-, goals- en BTTS-single met voldoende historie, een actuele bookmakerquote en begrensde modelafwijking. De optionele combi gebruikt twee verschillende wedstrijden en heeft meer variantie.</p></div>
         <div class="how-step"><b>Houd jullie keuzes samen bij</b><p>Onder ‘Onze bets’ beheren beide accounts dezelfde inzetten en resultaten. Met drie wat-als scenario’s vergelijk je vooraf bankroll, rendement en risico.</p></div>
       </div>
       <p class="dialog-note"><b>Belangrijk:</b> De marktensommen worden automatisch gecontroleerd, maar niet iedere modelmarkt is al afzonderlijk historisch gekalibreerd. Odds worden iedere drie uur ververst. Aftrap geeft geen inzetadvies; een hoge modelkans of positieve EV is geen garantie op winst.</p>
@@ -991,8 +1024,8 @@
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
   <script>window.AFTRAP_DATA=/*__DATA__*/[];window.AFTRAP_SETTLEMENTS=/*__SETTLEMENTS__*/[];</script>
-  <script src="aftrap-app.js?v=20260829-15"></script>
+  <script src="aftrap-app.js?v=20260830-1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
-  <script src="aftrap-account.js?v=20260829-5"></script>
+  <script src="aftrap-account.js?v=20260830-1"></script>
 </body>
 </html>

@@ -413,6 +413,26 @@
     el("bet-stake").focus();
   }
 
+  function openFromCombo(combo) {
+    openBetDialog();
+    el("bet-kind").value = "combi";
+    el("bet-description").value = combo.description;
+    el("bet-market").value = "Combinatie";
+    el("bet-selection").value = combo.selection;
+    el("bet-bookmaker").value = combo.bookmaker;
+    el("bet-odds").value = Number(combo.odds).toFixed(2);
+    el("bet-event-date").value = combo.eventDate;
+    el("bet-model-probability").value = combo.modelProbability;
+    el("bet-fair-market-probability").value = combo.fairMarketProbability ?? "";
+    el("bet-edge-pp").value = combo.edgePp ?? "";
+    el("bet-legs").value = (combo.legs || []).join("\n");
+    el("bet-notes").value = "Modelshortlist; combinatie handmatig afwikkelen.";
+    toggleLegs();
+    renderBetContext();
+    rememberBetContext();
+    el("bet-stake").focus();
+  }
+
   function toggleLegs() {
     el("bet-legs-wrap").classList.toggle("hidden", el("bet-kind").value !== "combi");
   }
@@ -631,5 +651,5 @@
     if (session) await authorizeSession(); else showLogin();
   });
 
-  window.AftrapAccount = { refresh: loadBets, openFromTip };
+  window.AftrapAccount = { refresh: loadBets, openFromTip, openFromCombo };
 })();

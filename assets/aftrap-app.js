@@ -19,7 +19,15 @@
     { label: "Goals value", empty: "over/under-goals", minProbability: 0.50, maxOdd: 2.50, matches: key => /^(over|under)_/.test(key) },
     { label: "BTTS value", empty: "BTTS", minProbability: 0.48, maxOdd: 2.50, matches: key => ["btts_yes", "btts_no"].includes(key) },
   ];
+  const DAILY_MAX_EV = 0.15;
+  const DAILY_MAX_MARKET_GAP = 0.12;
+  const DAILY_RULES = [
+    { label: "Winnaar", minProbability: 0.50, matches: key => ["home", "away"].includes(key) },
+    { label: "Goals", minProbability: 0.50, matches: key => /^(over|under)_/.test(key) },
+    { label: "BTTS", minProbability: 0.48, matches: key => ["btts_yes", "btts_no"].includes(key) },
+  ];
   const PAGE_SIZE = 20;
+  let currentDailyCombo = null;
   const state = { view: "tips", date: "all", league: "all", market: "all", bookmaker: "auto", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
   const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -33,6 +41,10 @@
   const teamName = value => TEAM_DISPLAY[value] || value;
   const displayText = value => Object.entries(TEAM_DISPLAY).reduce((text, [raw, nice]) => text.replaceAll(raw, nice), String(value));
   const dateObj = value => new Date(`${value}T12:00:00`);
+  const localTodayKey = () => {
+    const value = new Date();
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  };
   const shortDate = value => new Intl.DateTimeFormat("nl-NL", { weekday: "short", day: "numeric", month: "short" }).format(dateObj(value));
   const longDate = value => new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long" }).format(dateObj(value));
   const relativeDate = value => {
@@ -151,6 +163,86 @@
     if (state.sort === "edge") return ranking.sort((a, b) => b.expectedValue - a.expectedValue || b.probability - a.probability || Number(b.odd.o) - Number(a.odd.o));
     if (state.sort === "odds") return ranking.sort((a, b) => Number(b.odd.o) - Number(a.odd.o) || b.probability - a.probability || b.expectedValue - a.expectedValue);
     return ranking.sort((a, b) => b.probability - a.probability || b.expectedValue - a.expectedValue || Number(b.odd.o) - Number(a.odd.o));
+  }
+
+  function dailySelections() {
+    const today = localTodayKey();
+    const candidates = DATA.filter(fixture => fixture.date === today).flatMap(fixture => {
+      const effective = fixture.effective_matches || {};
+      const enoughHistory = Number(fixture.quality || 0) >= DASHBOARD_MIN_QUALITY
+        && Math.min(Number(effective.home ?? 0), Number(effective.away ?? 0)) >= DASHBOARD_MIN_EFFECTIVE_MATCHES;
+      if (!enoughHistory) return [];
+      return Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
+        const rule = DAILY_RULES.find(item => item.matches(key));
+        const probability = Number(rawProbability);
+        const odd = selectedOdd(fixture, key);
+        if (!rule || !odd || !Number.isFinite(probability)) return [];
+        const price = Number(odd.o);
+        const market = odd.f == null ? null : Number(odd.f);
+        const marketDifference = market == null ? null : probability - market;
+        const expectedValue = probability * price - 1;
+        if (probability < rule.minProbability || price < 1.30 || price > 2.50
+            || expectedValue < DASHBOARD_MIN_EV || expectedValue > DAILY_MAX_EV
+            || marketDifference == null || marketDifference < 0.01 || marketDifference > DAILY_MAX_MARKET_GAP) return [];
+        return [{
+          fixture, key, probability, odd, market, marketDifference, expectedValue,
+          breakEven: 1 / price, category: rule.label,
+        }];
+      });
+    });
+    const usedFixtures = new Set();
+    return DAILY_RULES.flatMap(rule => {
+      const choices = candidates.filter(item => item.category === rule.label).sort((a, b) => b.expectedValue - a.expectedValue || b.probability - a.probability);
+      const choice = choices.find(item => !usedFixtures.has(String(item.fixture.id)));
+      if (!choice) return [];
+      usedFixtures.add(String(choice.fixture.id));
+      return [choice];
+    }).slice(0, 3);
+  }
+
+  function renderDailyPicks() {
+    const root = document.getElementById("daily-picks");
+    const dateLabel = document.getElementById("daily-date");
+    if (!root || !dateLabel) return;
+    const today = localTodayKey();
+    const todayFixtures = DATA.filter(fixture => fixture.date === today);
+    const picks = dailySelections();
+    dateLabel.textContent = longDate(today);
+    currentDailyCombo = null;
+    if (!todayFixtures.length) {
+      root.innerHTML = `<div class="daily-empty">Vandaag staan er geen wedstrijden uit de gevolgde competities op het programma.</div>`;
+      return;
+    }
+    if (!picks.length) {
+      root.innerHTML = `<div class="daily-empty">Vandaag voldoet geen selectie aan alle grenzen voor historie, modelkans, marktverschil en actuele ${esc(state.bookmaker)}-odd. Het model forceert geen bet.</div>`;
+      return;
+    }
+    const singles = picks.map((item, index) => {
+      const shortReason = modelReason(item.fixture, item.key, item.probability).split(" Herleiding:")[0];
+      return `<article class="daily-pick"><div class="daily-pick-head"><span>Single ${index + 1} · ${esc(item.category)}</span><b>${pct1(item.probability)}</b></div><h3>${esc(marketLabel(item.key, item.fixture))}</h3><p class="daily-fixture">${esc(teamName(item.fixture.home))} – ${esc(teamName(item.fixture.away))} · ${esc(item.fixture.kickoff || "tijd n.n.b.")}</p><p class="daily-reason">${esc(shortReason)}</p><div class="daily-metrics"><span>Break-even <b>${pct1(item.breakEven)}</b></span><span>Model-EV <b>${signedPercent(item.expectedValue)}</b></span></div>${oddBlock(item.fixture, { key: item.key, p: item.probability })}<button class="daily-detail" type="button" data-open-match="${esc(item.fixture.id)}" data-open-market="${esc(item.key)}">Volledige onderbouwing</button></article>`;
+    }).join("");
+    let combination = "";
+    if (picks.length >= 2) {
+      const legs = picks.slice(0, 2);
+      const combinedOdd = legs.reduce((total, item) => total * Number(item.odd.o), 1);
+      const combinedProbability = legs.reduce((total, item) => total * item.probability, 1);
+      const combinedFair = legs.every(item => item.market != null) ? legs.reduce((total, item) => total * item.market, 1) : null;
+      currentDailyCombo = {
+        description: `Dagcombi · ${longDate(today)}`,
+        eventDate: today,
+        selection: legs.map(item => marketLabel(item.key, item.fixture)).join(" + "),
+        bookmaker: state.bookmaker,
+        odds: combinedOdd,
+        modelProbability: combinedProbability,
+        fairMarketProbability: combinedFair,
+        edgePp: combinedFair == null ? null : (combinedProbability - combinedFair) * 100,
+        legs: legs.map(item => `${teamName(item.fixture.home)} – ${teamName(item.fixture.away)}: ${marketLabel(item.key, item.fixture)}`),
+      };
+      const combinedBreakEven = 1 / combinedOdd;
+      const combinedEV = combinedProbability * combinedOdd - 1;
+      combination = `<article class="daily-combo"><div><span>Optionele combi · hogere variantie</span><h3>${currentDailyCombo.legs.map(esc).join("<br>")}</h3><p>Kansen rekenkundig gecombineerd over twee verschillende wedstrijden; een combi is kwetsbaarder dan de singles.</p></div><div class="daily-combo-numbers"><span>Combi-odd <b>@${oddText(combinedOdd)}</b></span><span>Modelkans <b>${pct1(combinedProbability)}</b></span><span>Break-even <b>${pct1(combinedBreakEven)}</b></span><span>Model-EV <b>${signedPercent(combinedEV)}</b></span><button type="button" data-add-daily-combo>+ combi bijhouden</button></div></article>`;
+    }
+    root.innerHTML = `<div class="daily-grid">${singles}</div>${combination}`;
   }
 
   function expectationOrigin(fixture) {
@@ -448,7 +540,11 @@
     if (found && Number.isFinite(probability)) window.AftrapAccount?.openFromTip(betPayload(fixture, key, probability, found));
   }
 
-  function renderAll() { renderTips(); renderMatches(); }
+  function addDailyCombo() {
+    if (currentDailyCombo) window.AftrapAccount?.openFromCombo(currentDailyCombo);
+  }
+
+  function renderAll() { renderTips(); renderMatches(); renderDailyPicks(); }
 
   document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", event => {
@@ -469,6 +565,7 @@
       if (market) openMatch(market.dataset.fixtureId, market.dataset.detailMarket);
       const add = event.target.closest("[data-add-bet]");
       if (add) addBetFromButton(add);
+      if (event.target.closest("[data-add-daily-combo]")) addDailyCombo();
     });
     document.getElementById("league-select").addEventListener("change", event => { state.league = event.target.value; resetRanking(); renderAll(); });
     document.getElementById("market-select").addEventListener("change", event => { state.market = event.target.value; resetRanking(); renderTips(); });

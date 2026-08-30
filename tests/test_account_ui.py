@@ -21,9 +21,9 @@ class AccountUiTests(unittest.TestCase):
             'id="bets-view"',
             'id="bet-form"',
             'id="scenario-bankroll"',
-            'src="aftrap-account.js?v=20260829-5"',
+            'src="aftrap-account.js?v=20260830-1"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260829-15"',
+            'src="aftrap-app.js?v=20260830-1"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -80,6 +80,20 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn('date: "all"', self.app_js)
         self.assertNotIn("defaultProgrammeDate", self.app_js)
         self.assertIn('state.date === day ? "active"', self.app_js)
+
+    def test_daily_shortlist_uses_conservative_distinct_singles_and_combo(self):
+        self.assertIn('id="daily-picks"', self.template)
+        self.assertIn("dailySelections", self.app_js)
+        self.assertIn("DAILY_MAX_EV = 0.15", self.app_js)
+        self.assertIn("DAILY_MAX_MARKET_GAP = 0.12", self.app_js)
+        self.assertIn("price < 1.30 || price > 2.50", self.app_js)
+        self.assertIn("usedFixtures", self.app_js)
+        self.assertIn("!usedFixtures.has(String(item.fixture.id))", self.app_js)
+        self.assertIn("currentDailyCombo", self.app_js)
+        self.assertIn("data-add-daily-combo", self.app_js)
+        self.assertIn("openFromCombo", self.account_js)
+        self.assertIn("combinatie handmatig afwikkelen", self.account_js)
+        self.assertIn("Break-even = 1 ÷ odd", self.template)
 
     def test_minimum_odd_ranking_is_wired(self):
         self.assertIn('id="minimum-odd"', self.template)
