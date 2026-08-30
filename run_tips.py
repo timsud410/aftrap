@@ -54,6 +54,23 @@ MONTH_LABELS = (
 # xG-bronnen in volgorde van betrouwbaarheid.
 XG_PREFERENCE = ("understat", "api_football", "sot_proxy")
 
+# De eerste dagelijkse meting is hersteld uit het onveranderlijke GitHub
+# Pages-artifact dat op 30 augustus 2026 om 17:37 lokale tijd is gepubliceerd.
+# Alle onderstaande wedstrijden moesten toen nog beginnen en hadden nog geen
+# uitslag in dat artifact. De rangnummers horen bij Bet365 en minimumodd 1,30.
+RECOVERED_RECOMMENDATION_HISTORY = [
+    {"d": "2026-08-30", "id": "1550099", "h": "Cagliari", "a": "Inter", "s": "away_under_2.5", "b": "Bet365", "o": 1.44, "p": 0.7775, "q": 0.65, "hit": True, "seen": "2026-08-30T17:37:54+02:00", "rank": 1, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1550099", "h": "Cagliari", "a": "Inter", "s": "under_3.5", "b": "Bet365", "o": 1.44, "p": 0.7525, "q": 0.65, "hit": True, "seen": "2026-08-30T17:37:54+02:00", "rank": 2, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1570355", "h": "Celta", "a": "Ath Bilbao", "s": "home_over_0.5", "b": "Bet365", "o": 1.33, "p": 0.7449, "q": 0.71, "hit": False, "seen": "2026-08-30T17:37:54+02:00", "rank": 3, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1550105", "h": "Napoli", "a": "Como", "s": "fh_under_1.5", "b": "Bet365", "o": 1.33, "p": 0.7402, "q": 0.65, "hit": False, "seen": "2026-08-30T17:37:54+02:00", "rank": 4, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1550105", "h": "Napoli", "a": "Como", "s": "away_under_1.5", "b": "Bet365", "o": 1.36, "p": 0.7296, "q": 0.65, "hit": False, "seen": "2026-08-30T17:37:54+02:00", "rank": 5, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1570355", "h": "Celta", "a": "Ath Bilbao", "s": "home_or_away", "b": "Bet365", "o": 1.36, "p": 0.7261, "q": 0.71, "hit": True, "seen": "2026-08-30T17:37:54+02:00", "rank": 6, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1570355", "h": "Celta", "a": "Ath Bilbao", "s": "over_1.5", "b": "Bet365", "o": 1.36, "p": 0.7138, "q": 0.71, "hit": True, "seen": "2026-08-30T17:37:54+02:00", "rank": 7, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1550105", "h": "Napoli", "a": "Como", "s": "home_over_0.5", "b": "Bet365", "o": 1.33, "p": 0.7076, "q": 0.65, "hit": True, "seen": "2026-08-30T17:37:54+02:00", "rank": 8, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1550105", "h": "Napoli", "a": "Como", "s": "home_or_draw", "b": "Bet365", "o": 1.36, "p": 0.7030, "q": 0.65, "hit": False, "seen": "2026-08-30T17:37:54+02:00", "rank": 9, "snapshot_minimum": 1.30, "recovered": True},
+    {"d": "2026-08-30", "id": "1570355", "h": "Celta", "a": "Ath Bilbao", "s": "fh_under_1.5", "b": "Bet365", "o": 1.33, "p": 0.7028, "q": 0.71, "hit": False, "seen": "2026-08-30T17:37:54+02:00", "rank": 10, "snapshot_minimum": 1.30, "recovered": True},
+]
+
 
 def expectation_breakdown(
     ratings: TeamRatings, home_team: str, away_team: str
@@ -1183,13 +1200,19 @@ def main_with_args(
     # inline script kan door browserbeveiliging worden geweigerd; dan laadt de
     # interface wel, maar ziet zij ten onrechte nul wedstrijden en nul odds.
     # Als normaal extern script is de data vóór aftrap-app.js beschikbaar.
+    recommendation_history = daily_recommendation_history(conn)
+    recovered_days = {item["d"] for item in RECOVERED_RECOMMENDATION_HISTORY}
+    recommendation_history = [
+        *RECOVERED_RECOMMENDATION_HISTORY,
+        *(item for item in recommendation_history if item["d"] not in recovered_days),
+    ]
     data_js = (
         "window.AFTRAP_DATA="
         + json.dumps(fixtures, ensure_ascii=False, separators=(",", ":"))
         + ";window.AFTRAP_SETTLEMENTS="
         + json.dumps(recent_settlements(conn), ensure_ascii=False, separators=(",", ":"))
         + ";window.AFTRAP_RECOMMENDATION_HISTORY="
-        + json.dumps(daily_recommendation_history(conn), ensure_ascii=False, separators=(",", ":"))
+        + json.dumps(recommendation_history, ensure_ascii=False, separators=(",", ":"))
         + ";\n"
     )
     (out.parent / "aftrap-data.js").write_text(data_js, encoding="utf-8")
