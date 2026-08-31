@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="aftrap-account.css?v=20260831-7">
+  <link rel="stylesheet" href="aftrap-account.css?v=20260831-8">
   <style>
     :root {
       --navy: #0b1220; --navy-2: #131d30; --ink: #111827; --muted: #667085;
@@ -1059,6 +1059,7 @@
       </section>
       <section id="bets-view" class="hidden" role="tabpanel" aria-labelledby="tab-bets">
         <div class="bets-head"><div><h2>Onze bets</h2><p>Jullie beheren samen dezelfde inzetten, resultaten en bankroll.</p></div><button class="primary-action" id="new-bet" type="button">+ Nieuwe bet</button></div>
+        <section class="bet-panel official-bets-panel" aria-labelledby="official-bets-title"><div class="bet-panel-head"><div><h3 id="official-bets-title">Officiële selecties om te plaatsen</h3><p>Dit zijn aanbevelingen; pas na ‘Zet in logboek’ telt een bet mee in jullie resultaten.</p></div></div><div class="official-bet-suggestions" id="official-bet-suggestions"></div></section>
         <div class="bets-summary" id="bets-summary"></div>
         <div class="bets-layout">
           <div class="bet-panel">
@@ -1179,8 +1180,8 @@
     helpDialog.addEventListener("click",event=>{if(event.target===helpDialog)helpDialog.close();});
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
-  <script src="aftrap-data.js?v=20260831-7"></script>
-  <script src="aftrap-app.js?v=20260831-7"></script>
+  <script src="aftrap-data.js?v=20260831-8"></script>
+  <script src="aftrap-app.js?v=20260831-8"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260830-1"></script>
 </body>

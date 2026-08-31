@@ -22,9 +22,9 @@ class AccountUiTests(unittest.TestCase):
             'id="bet-form"',
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260830-1"',
-            'href="aftrap-account.css?v=20260831-7"',
-            'src="aftrap-app.js?v=20260831-7"',
-            'src="aftrap-data.js?v=20260831-7"',
+            'href="aftrap-account.css?v=20260831-8"',
+            'src="aftrap-app.js?v=20260831-8"',
+            'src="aftrap-data.js?v=20260831-8"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -107,6 +107,14 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("Goed", self.app_js)
         self.assertIn("Fout", self.app_js)
 
+    def test_official_recommendations_are_visible_in_shared_bets_view(self):
+        self.assertIn('id="official-bet-suggestions"', self.template)
+        self.assertIn("renderOfficialBetSuggestions", self.app_js)
+        self.assertIn("+ Zet in logboek", self.app_js)
+        self.assertIn("OFFICIAL_ODDS_MAX_AGE", self.app_js)
+        self.assertIn("minimaal 1,5%", self.app_js)
+        self.assertIn("scrollIntoView", self.app_js)
+
     def test_daily_top10_history_and_compact_score_feed_are_wired(self):
         self.assertIn('id="top10-results"', self.template)
         self.assertIn('id="score-feed"', self.template)
@@ -120,8 +128,8 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("top10-panel", self.template)
 
     def test_generated_data_uses_external_script_before_app(self):
-        data_script = 'src="aftrap-data.js?v=20260831-7"'
-        app_script = 'src="aftrap-app.js?v=20260831-7"'
+        data_script = 'src="aftrap-data.js?v=20260831-8"'
+        app_script = 'src="aftrap-app.js?v=20260831-8"'
         self.assertLess(self.template.index(data_script), self.template.index(app_script))
         self.assertNotIn("window.AFTRAP_DATA=/*__DATA__*/[]", self.template)
 

@@ -23,6 +23,8 @@
   ];
   const OFFICIAL_CATEGORY_ORDER = ["Winnaar", "Goals", "BTTS"];
   const OFFICIAL_MIN_ODD = 1.30;
+  const OFFICIAL_MIN_EV = 0.015;
+  const OFFICIAL_ODDS_MAX_AGE = 24;
   const PAGE_SIZE = 20;
   let currentDailyCombo = null;
   const state = { view: "tips", date: "all", officialDate: null, league: "all", market: "all", bookmaker: "auto", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
@@ -114,9 +116,9 @@
     return display;
   }
 
-  function selectedOdd(fixture, key, bookmaker = state.bookmaker) {
+  function selectedOdd(fixture, key, bookmaker = state.bookmaker, maxAge = 6) {
     const available = (fixture.odds || []).filter(odd => odd.s === key && (bookmaker === "best" || odd.b === bookmaker));
-    const fresh = available.filter(odd => (oddAge(odd) ?? 0) <= 6);
+    const fresh = available.filter(odd => (oddAge(odd) ?? 0) <= maxAge);
     return fresh.sort((a, b) => Number(b.o) - Number(a.o))[0] || null;
   }
 
@@ -188,21 +190,20 @@
     }).join("");
   }
 
-  function officialSelections() {
-    const focusDate = officialFocusDate();
+  function officialSelections(focusDate = officialFocusDate()) {
     const frozen = OFFICIAL_HISTORY.filter(item => item.d === focusDate && item.hit == null).flatMap(item => {
       const fixture = DATA.find(candidate => String(candidate.id) === String(item.id))
         || DATA.find(candidate => candidate.date === item.d && candidate.home === item.h && candidate.away === item.a);
       if (!fixture || !isPreMatch(fixture)) return [];
-      const liveOdd = selectedOdd(fixture, item.s, "Bet365");
+      const liveOdd = selectedOdd(fixture, item.s, "Bet365", OFFICIAL_ODDS_MAX_AGE);
       const adjustedProbability = Number(item.ap);
       const currentPrice = Number(liveOdd?.o);
       const currentEV = liveOdd && Number.isFinite(currentPrice) ? adjustedProbability * currentPrice - 1 : null;
       const executable = Boolean(liveOdd)
-        && (oddAge(liveOdd) ?? Infinity) <= 6
+        && (oddAge(liveOdd) ?? Infinity) <= OFFICIAL_ODDS_MAX_AGE
         && currentPrice >= OFFICIAL_MIN_ODD
         && currentPrice <= 2.5
-        && currentEV >= 0.02;
+        && currentEV >= OFFICIAL_MIN_EV;
       return [{
         key: item.s,
         category: item.c,
@@ -236,6 +237,24 @@
       })),
     );
     return selections.sort((a, b) => OFFICIAL_CATEGORY_ORDER.indexOf(a.category) - OFFICIAL_CATEGORY_ORDER.indexOf(b.category));
+  }
+
+  function renderOfficialBetSuggestions() {
+    const root = document.getElementById("official-bet-suggestions");
+    if (!root) return;
+    const suggestions = availableOfficialDates()
+      .flatMap(day => officialSelections(day))
+      .sort((a, b) => a.fixture.date.localeCompare(b.fixture.date) || b.expectedValue - a.expectedValue);
+    if (!suggestions.length) {
+      root.innerHTML = `<div class="official-bets-empty"><b>Nog geen plaatsbare officiële selectie</b><span>De Bet365-prijzen worden dagelijks opnieuw gecontroleerd. Modeltips zonder positieve prijswaarde worden hier bewust niet als bet getoond.</span></div>`;
+      return;
+    }
+    root.innerHTML = suggestions.map(item => {
+      const fixture = item.fixture;
+      const odd = Number(item.odd?.o);
+      const disabled = !item.executable || !Number.isFinite(odd);
+      return `<article class="official-bet-suggestion"><div><span>${esc(relativeDate(fixture.date))} · ${esc(fixture.kickoff || "tijd n.n.b.")} · ${esc(item.category)}</span><b>${esc(teamName(fixture.home))} – ${esc(teamName(fixture.away))}</b><strong>${esc(marketLabel(item.key, fixture))}</strong></div><div class="official-bet-price"><span>Conservatieve kans ${pct1(item.adjustedProbability)}</span><b>${Number.isFinite(odd) ? `@${oddText(odd)}` : "—"}</b><em>${signedPercent(item.expectedValue)} EV</em></div><button type="button" ${disabled ? "disabled" : `data-add-bet data-fixture-id="${esc(fixture.id)}" data-selection-key="${esc(item.key)}" data-bookmaker="Bet365" data-model-probability="${item.adjustedProbability}"`}>${disabled ? "Prijs gewijzigd" : "+ Zet in logboek"}</button></article>`;
+    }).join("");
   }
 
   function historicalDailyTop10() {
@@ -390,7 +409,7 @@
       return;
     }
     if (!picks.length) {
-      root.innerHTML = `<div class="daily-empty official-empty"><b>Geen officiële bet voor deze speeldag</b><span>Geen selectie houdt minimaal 2% verwachte waarde over na marktcorrectie, datakwaliteit en signaalvalidatie. In de Modelverkenner hieronder blijven alle percentages zichtbaar.</span></div>`;
+      root.innerHTML = `<div class="daily-empty official-empty"><b>Geen officiële bet voor deze speeldag</b><span>Geen selectie houdt minimaal 1,5% verwachte waarde over na marktcorrectie, datakwaliteit en signaalvalidatie. In de Modelverkenner hieronder blijven alle percentages zichtbaar.</span></div>`;
       return;
     }
     const singles = picks.map((item, index) => {
@@ -728,7 +747,8 @@
     const fixture = DATA.find(item => String(item.id) === button.dataset.fixtureId);
     if (!fixture) return;
     const key = button.dataset.selectionKey;
-    const found = selectedOdd(fixture, key, button.dataset.bookmaker || state.bookmaker);
+    const official = Boolean(button.closest(".official-pick,.official-bet-suggestion"));
+    const found = selectedOdd(fixture, key, button.dataset.bookmaker || state.bookmaker, official ? OFFICIAL_ODDS_MAX_AGE : 6);
     if (!found) {
       window.alert("Deze quotering is niet meer actueel. De lijst wordt opnieuw gecontroleerd.");
       renderAll();
@@ -742,7 +762,7 @@
     if (currentDailyCombo) window.AftrapAccount?.openFromCombo(currentDailyCombo);
   }
 
-  function renderAll() { renderTips(); renderMatches(); renderOfficialDateNav(); renderDailyPicks(); renderOfficialHistory(); renderTop10History(); renderScoreFeed(); }
+  function renderAll() { renderTips(); renderMatches(); renderOfficialDateNav(); renderDailyPicks(); renderOfficialBetSuggestions(); renderOfficialHistory(); renderTop10History(); renderScoreFeed(); }
 
   document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", event => {
@@ -754,6 +774,8 @@
         document.querySelector(".controls").classList.toggle("hidden", state.view === "bets");
         document.querySelectorAll("[data-ranking-filter]").forEach(node => node.classList.toggle("hidden", state.view !== "tips"));
         if (state.view === "bets") window.AftrapAccount?.refresh();
+        const targetView = document.getElementById(`${state.view}-view`);
+        window.requestAnimationFrame(() => targetView?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
       }
       const chip = event.target.closest("[data-date]");
       if (chip) { state.date = chip.dataset.date; resetRanking(); document.querySelectorAll(".date-chip").forEach(node => node.classList.toggle("active", node === chip)); renderAll(); }

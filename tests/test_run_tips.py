@@ -11,6 +11,7 @@ from run_tips import (
     head_to_head_profile,
     matchday_label,
     model_history_summary,
+    official_category,
     official_recommendation_history,
     select_official_recommendations,
     settle,
@@ -22,6 +23,22 @@ from run_tips import (
 
 
 class SettlementTests(unittest.TestCase):
+    def test_first_half_totals_are_eligible_for_official_goal_selection(self):
+        self.assertEqual(official_category("fh_under_1.5"), ("Goals", 0.52))
+        self.assertEqual(official_category("fh_over_0.5"), ("Goals", 0.52))
+        now = datetime.now().astimezone()
+        fixture = {
+            "id": "weekend-1", "date": "2026-09-05", "quality": 0.71,
+            "effective_matches": {"home": 36.0, "away": 36.0},
+            "probs": {"fh_under_1.5": 0.738},
+            "tips": [{"raw": "fh_under_1.5", "b": "medium", "r": "getoetst tempo-signaal"}],
+            "odds": [{"s": "fh_under_1.5", "b": "Bet365", "o": 1.44,
+                      "f": 0.6453, "u": now.isoformat()}],
+        }
+        picks = select_official_recommendations([fixture], now=now)
+        self.assertEqual(len(picks), 1)
+        self.assertGreaterEqual(picks[0]["ev"], 0.015)
+
     def test_expectation_breakdown_multiplies_back_to_goal_expectation(self):
         ratings = TeamRatings(
             attack={"Thuis": 0.12, "Uit": -0.08},

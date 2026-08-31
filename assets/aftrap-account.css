@@ -37,6 +37,23 @@
 .bet-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
 .bet-panel-head h3 { margin: 0; font-size: 15px; }
 .bet-panel-head p { margin: 3px 0 0; color: var(--muted); font-size: 9px; }
+.official-bets-panel { margin-bottom: 16px; }
+.official-bet-suggestions { display: grid; gap: 8px; }
+.official-bet-suggestion { min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 14px; padding: 14px; border: 1px solid #dce7d0; border-radius: 14px; background: linear-gradient(100deg,#fbfff7,#f5faef); }
+.official-bet-suggestion > div:first-child { min-width: 0; }
+.official-bet-suggestion span,.official-bet-suggestion b,.official-bet-suggestion strong { display: block; }
+.official-bet-suggestion > div:first-child span { color: #718166; font-size: 7px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.official-bet-suggestion > div:first-child b { margin-top: 5px; overflow: hidden; color: #253126; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.official-bet-suggestion > div:first-child strong { margin-top: 3px; color: #111a14; font-size: 13px; }
+.official-bet-price { min-width: 104px; text-align: right; }
+.official-bet-price span { color: #718166; font-size: 7px; }
+.official-bet-price b { margin-top: 3px; color: #335c25; font-family: var(--num); font-size: 16px; }
+.official-bet-price em { display: block; margin-top: 2px; color: #4b782f; font-size: 7px; font-style: normal; font-weight: 800; }
+.official-bet-suggestion button { min-height: 38px; border: 0; border-radius: 10px; padding: 0 12px; background: #172314; color: #fff; font-size: 8px; font-weight: 850; }
+.official-bet-suggestion button:disabled { background: #dce2d8; color: #758170; }
+.official-bets-empty { display: grid; gap: 4px; padding: 18px; border: 1px dashed #d7dde4; border-radius: 13px; background: #f8fafc; }
+.official-bets-empty b { font-size: 11px; }
+.official-bets-empty span { color: var(--muted); font-size: 8px; line-height: 1.55; }
 .bet-filters { display: flex; gap: 5px; }
 .bet-filter { border: 1px solid var(--line); border-radius: 999px; padding: 6px 9px; background: white; color: var(--muted); font-size: 8px; font-weight: 800; }
 .bet-filter.active { border-color: var(--navy); background: var(--navy); color: white; }
@@ -105,6 +122,8 @@
   .bet-kpi strong { font-size: 18px; }
   .bet-panel { padding: 14px; border-radius: 17px; }
   .bet-panel-head { align-items: start; flex-direction: column; }
+  .official-bet-suggestion { grid-template-columns: minmax(0,1fr) auto; gap: 10px; }
+  .official-bet-suggestion button { grid-column: 1 / -1; width: 100%; }
   .bet-item { grid-template-columns: 1fr; }
   .bet-numbers { min-width: 0; flex-wrap: wrap; justify-content: space-between; text-align: left; }
   .bet-actions { grid-column: 1; }

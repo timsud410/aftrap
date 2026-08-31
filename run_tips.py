@@ -62,9 +62,10 @@ OFFICIAL_MIN_QUALITY = 0.62
 OFFICIAL_MIN_EFFECTIVE_MATCHES = 10.0
 OFFICIAL_MIN_ODD = 1.30
 OFFICIAL_MAX_ODD = 2.50
-OFFICIAL_MIN_ADJUSTED_EV = 0.02
+OFFICIAL_MIN_ADJUSTED_EV = 0.015
 OFFICIAL_MAX_ADJUSTED_EV = 0.12
 OFFICIAL_MAX_MARKET_GAP = 0.10
+OFFICIAL_MAX_ODDS_AGE_HOURS = 24
 OFFICIAL_SIGNAL_BANDS = {"high", "medium"}
 
 # De eerste dagelijkse meting is hersteld uit het onveranderlijke GitHub
@@ -767,7 +768,10 @@ def official_category(selection_key: str) -> tuple[str, float] | None:
         return "Winnaar", 0.50
     if selection_key in {"btts_yes", "btts_no"}:
         return "BTTS", 0.52
-    if selection_key.startswith(("over_", "under_", "home_over_", "home_under_", "away_over_", "away_under_")):
+    if selection_key.startswith((
+        "over_", "under_", "home_over_", "home_under_",
+        "away_over_", "away_under_", "fh_over_", "fh_under_",
+    )):
         return "Goals", 0.52
     return None
 
@@ -779,7 +783,7 @@ def select_official_recommendations(
 
     De bookmakerkans is het anker. De modelafwijking wordt op basis van
     datakwaliteit en effectieve historie teruggeschoven richting de markt.
-    Alleen wanneer daarna nog minimaal 2% uitvoerbare EV overblijft, kan een
+    Alleen wanneer daarna nog minimaal 1,5% uitvoerbare EV overblijft, kan een
     vooraf walk-forward-gevalideerd signaal de officiële meetreeks in.
     """
     checked_at = now or datetime.now().astimezone()
@@ -808,7 +812,7 @@ def select_official_recommendations(
                 age_hours = (checked_at - updated).total_seconds() / 3600
             except (KeyError, TypeError, ValueError):
                 continue
-            if age_hours < -0.1 or age_hours > 6:
+            if age_hours < -0.1 or age_hours > OFFICIAL_MAX_ODDS_AGE_HOURS:
                 continue
             key = str(odd["s"])
             if key not in odds_by_key or float(odd["o"]) > float(odds_by_key[key]["o"]):
