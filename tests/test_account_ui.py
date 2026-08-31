@@ -23,8 +23,8 @@ class AccountUiTests(unittest.TestCase):
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260830-1"',
             'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260830-4"',
-            'src="aftrap-data.js?v=20260830-4"',
+            'src="aftrap-app.js?v=20260831-6"',
+            'src="aftrap-data.js?v=20260831-6"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -84,12 +84,12 @@ class AccountUiTests(unittest.TestCase):
 
     def test_daily_shortlist_uses_conservative_distinct_singles_and_combo(self):
         self.assertIn('id="daily-picks"', self.template)
-        self.assertIn("dailySelections", self.app_js)
-        self.assertIn("DAILY_MAX_EV = 0.15", self.app_js)
-        self.assertIn("DAILY_MAX_MARKET_GAP = 0.12", self.app_js)
-        self.assertIn("price < 1.30 || price > 2.50", self.app_js)
-        self.assertIn("usedFixtures", self.app_js)
-        self.assertIn("!usedFixtures.has(String(item.fixture.id))", self.app_js)
+        self.assertIn('id="official-history"', self.template)
+        self.assertIn("OFFICIAL_HISTORY", self.app_js)
+        self.assertIn("officialSelections", self.app_js)
+        self.assertIn("Conservatieve kans", self.app_js)
+        self.assertIn("Officiële EV", self.app_js)
+        self.assertIn("data-model-probability", self.app_js)
         self.assertIn("currentDailyCombo", self.app_js)
         self.assertIn("data-add-daily-combo", self.app_js)
         self.assertIn("openFromCombo", self.account_js)
@@ -109,8 +109,8 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("top10-panel", self.template)
 
     def test_generated_data_uses_external_script_before_app(self):
-        data_script = 'src="aftrap-data.js?v=20260830-4"'
-        app_script = 'src="aftrap-app.js?v=20260830-4"'
+        data_script = 'src="aftrap-data.js?v=20260831-6"'
+        app_script = 'src="aftrap-app.js?v=20260831-6"'
         self.assertLess(self.template.index(data_script), self.template.index(app_script))
         self.assertNotIn("window.AFTRAP_DATA=/*__DATA__*/[]", self.template)
 
@@ -122,7 +122,7 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("b.probability - a.probability", self.app_js)
         self.assertIn("Number(odd.o) < state.minimumOdd", self.app_js)
         self.assertIn("filter(isPreMatch)", self.app_js)
-        self.assertIn("fixture.date === today && isPreMatch(fixture)", self.app_js)
+        self.assertIn("DATA.filter(isPreMatch)", self.app_js)
 
     def test_chance_ranking_odds_are_visible_on_light_rows(self):
         self.assertIn(".chance-row .odd-pill", self.template)

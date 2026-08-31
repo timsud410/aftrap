@@ -196,6 +196,30 @@ CREATE TABLE IF NOT EXISTS daily_recommendations (
 CREATE INDEX IF NOT EXISTS idx_daily_recommendations_date
 ON daily_recommendations (recommendation_date DESC);
 
+-- De officiële laag is bewust een aparte meetreeks. Alleen selecties die aan
+-- alle conservatieve toelatingsregels voldoen komen hierin terecht; de veel
+-- bredere dagelijkse Top 10 blijft in daily_recommendations beschikbaar.
+CREATE TABLE IF NOT EXISTS official_recommendations (
+    recommendation_date  TEXT NOT NULL,
+    fixture_id            INTEGER NOT NULL REFERENCES fixtures(id) ON DELETE CASCADE,
+    selection_key         TEXT NOT NULL,
+    category              TEXT NOT NULL,
+    bookmaker_name        TEXT NOT NULL,
+    odd                    REAL NOT NULL,
+    model_probability      REAL NOT NULL,
+    market_probability     REAL NOT NULL,
+    adjusted_probability   REAL NOT NULL,
+    expected_value         REAL NOT NULL,
+    quality                REAL NOT NULL,
+    signal_band            TEXT NOT NULL,
+    first_seen_at          TEXT NOT NULL,
+    last_seen_at           TEXT NOT NULL,
+    PRIMARY KEY (recommendation_date, fixture_id, selection_key, bookmaker_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_official_recommendations_date
+ON official_recommendations (recommendation_date DESC);
+
 -- Beschikbaarheid is brondata die vlak voor de aftrap kan veranderen. JSON
 -- houdt het API-antwoord controleerbaar zonder de modeltabellen te vervuilen.
 CREATE TABLE IF NOT EXISTS fixture_availability (

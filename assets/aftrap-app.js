@@ -3,6 +3,7 @@
 
   const DATA = window.AFTRAP_DATA || [];
   const RECOMMENDATION_HISTORY = window.AFTRAP_RECOMMENDATION_HISTORY || [];
+  const OFFICIAL_HISTORY = window.AFTRAP_OFFICIAL_HISTORY || [];
   const BAND = {
     high: { score: 4, label: "sterk", bars: 3 },
     medium: { score: 3, label: "goed onderbouwd", bars: 2 },
@@ -20,13 +21,8 @@
     { label: "Goals value", empty: "over/under-goals", minProbability: 0.50, maxOdd: 2.50, matches: key => /^(over|under)_/.test(key) },
     { label: "BTTS value", empty: "BTTS", minProbability: 0.48, maxOdd: 2.50, matches: key => ["btts_yes", "btts_no"].includes(key) },
   ];
-  const DAILY_MAX_EV = 0.15;
-  const DAILY_MAX_MARKET_GAP = 0.12;
-  const DAILY_RULES = [
-    { label: "Winnaar", minProbability: 0.50, matches: key => ["home", "away"].includes(key) },
-    { label: "Goals", minProbability: 0.50, matches: key => /^(over|under)_/.test(key) },
-    { label: "BTTS", minProbability: 0.48, matches: key => ["btts_yes", "btts_no"].includes(key) },
-  ];
+  const OFFICIAL_CATEGORY_ORDER = ["Winnaar", "Goals", "BTTS"];
+  const OFFICIAL_MIN_ODD = 1.30;
   const PAGE_SIZE = 20;
   let currentDailyCombo = null;
   const state = { view: "tips", date: "all", league: "all", market: "all", bookmaker: "auto", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
@@ -168,39 +164,61 @@
     return ranking.sort((a, b) => b.probability - a.probability || b.expectedValue - a.expectedValue || Number(b.odd.o) - Number(a.odd.o));
   }
 
-  function dailySelections() {
+  function officialFocusDate() {
     const today = localTodayKey();
-    const candidates = DATA.filter(fixture => fixture.date === today && isPreMatch(fixture)).flatMap(fixture => {
-      const effective = fixture.effective_matches || {};
-      const enoughHistory = Number(fixture.quality || 0) >= DASHBOARD_MIN_QUALITY
-        && Math.min(Number(effective.home ?? 0), Number(effective.away ?? 0)) >= DASHBOARD_MIN_EFFECTIVE_MATCHES;
-      if (!enoughHistory) return [];
-      return Object.entries(fixture.probs || {}).flatMap(([key, rawProbability]) => {
-        const rule = DAILY_RULES.find(item => item.matches(key));
-        const probability = Number(rawProbability);
-        const odd = selectedOdd(fixture, key);
-        if (!rule || !odd || !Number.isFinite(probability)) return [];
-        const price = Number(odd.o);
-        const market = odd.f == null ? null : Number(odd.f);
-        const marketDifference = market == null ? null : probability - market;
-        const expectedValue = probability * price - 1;
-        if (probability < rule.minProbability || price < 1.30 || price > 2.50
-            || expectedValue < DASHBOARD_MIN_EV || expectedValue > DAILY_MAX_EV
-            || marketDifference == null || marketDifference < 0.01 || marketDifference > DAILY_MAX_MARKET_GAP) return [];
-        return [{
-          fixture, key, probability, odd, market, marketDifference, expectedValue,
-          breakEven: 1 / price, category: rule.label,
-        }];
-      });
+    const preMatchDates = [...new Set(DATA.filter(isPreMatch).map(fixture => fixture.date))].sort();
+    if (preMatchDates.includes(today)) return today;
+    return preMatchDates.find(day => day > today) || preMatchDates[0] || today;
+  }
+
+  function officialSelections() {
+    const focusDate = officialFocusDate();
+    const frozen = OFFICIAL_HISTORY.filter(item => item.d === focusDate && item.hit == null).flatMap(item => {
+      const fixture = DATA.find(candidate => String(candidate.id) === String(item.id))
+        || DATA.find(candidate => candidate.date === item.d && candidate.home === item.h && candidate.away === item.a);
+      if (!fixture || !isPreMatch(fixture)) return [];
+      const liveOdd = selectedOdd(fixture, item.s, "Bet365");
+      const adjustedProbability = Number(item.ap);
+      const currentPrice = Number(liveOdd?.o);
+      const currentEV = liveOdd && Number.isFinite(currentPrice) ? adjustedProbability * currentPrice - 1 : null;
+      const executable = Boolean(liveOdd)
+        && (oddAge(liveOdd) ?? Infinity) <= 6
+        && currentPrice >= OFFICIAL_MIN_ODD
+        && currentPrice <= 2.5
+        && currentEV >= 0.02;
+      return [{
+        key: item.s,
+        category: item.c,
+        p: Number(item.p),
+        market: Number(item.mp),
+        adjusted_p: adjustedProbability,
+        ev: currentEV == null ? Number(item.ev) : currentEV,
+        odd: liveOdd || { o: Number(item.o), b: item.b || "Bet365" },
+        issuedOdd: Number(item.o),
+        frozen: true,
+        executable,
+        fixture,
+        probability: Number(item.p),
+        adjustedProbability,
+        expectedValue: currentEV == null ? Number(item.ev) : currentEV,
+        breakEven: 1 / (liveOdd ? currentPrice : Number(item.o)),
+      }];
     });
-    const usedFixtures = new Set();
-    return DAILY_RULES.flatMap(rule => {
-      const choices = candidates.filter(item => item.category === rule.label).sort((a, b) => b.expectedValue - a.expectedValue || b.probability - a.probability);
-      const choice = choices.find(item => !usedFixtures.has(String(item.fixture.id)));
-      if (!choice) return [];
-      usedFixtures.add(String(choice.fixture.id));
-      return [choice];
-    }).slice(0, 3);
+    const selections = frozen.length ? frozen : DATA.filter(fixture => fixture.date === focusDate && isPreMatch(fixture)).flatMap(fixture =>
+      (fixture.official || []).map(item => ({
+        ...item,
+        fixture,
+        issuedOdd: Number(item.odd?.o),
+        frozen: false,
+        executable: true,
+        probability: Number(item.p),
+        adjustedProbability: Number(item.adjusted_p),
+        market: Number(item.market),
+        expectedValue: Number(item.ev),
+        breakEven: 1 / Number(item.odd?.o),
+      })),
+    );
+    return selections.sort((a, b) => OFFICIAL_CATEGORY_ORDER.indexOf(a.category) - OFFICIAL_CATEGORY_ORDER.indexOf(b.category));
   }
 
   function historicalDailyTop10() {
@@ -239,6 +257,17 @@
     const summary = `<div class="top10-summary"><div><span>Afgewikkeld</span><b>${all.length}</b></div><div><span>Goed</span><b>${totalHits}</b></div><div><span>Hitrate</span><b>${pct1(totalHits / all.length)}</b></div><div><span>Flat-stake ROI</span><b class="${totalProfit >= 0 ? "positive" : "negative"}">${signedPercent(totalProfit / all.length)}</b></div></div>`;
     const rows = days.slice(0, 7).map(day => `<div class="top10-day"><span>${esc(shortDate(day.day))}${day.recovered ? " · hersteld archief" : ""}</span><b>${day.hits}/${day.settled.length} goed</b><em>${pct1(day.hits / day.settled.length)}</em><strong class="${day.profit >= 0 ? "positive" : "negative"}">${day.roi == null ? "—" : signedPercent(day.roi)} ROI</strong></div>`).join("");
     root.innerHTML = `${summary}<div class="top10-days">${rows}</div><p class="top10-note">Elke selectie telt als één vaste eenheid inzet. De Top 10 wordt per dag bepaald uit vóór de aftrap opgeslagen kandidaten. De meting van 30 augustus is exact hersteld uit het gepubliceerde archief bij minimumodd @1,30; begonnen wedstrijden zijn uitgesloten.</p>`;
+  }
+
+  function renderOfficialHistory() {
+    const root = document.getElementById("official-history");
+    if (!root) return;
+    const settled = OFFICIAL_HISTORY.filter(item => item.hit != null);
+    const open = OFFICIAL_HISTORY.filter(item => item.hit == null).length;
+    const hits = settled.filter(item => item.hit === true).length;
+    const profit = settled.reduce((total, item) => total + (item.hit ? Number(item.o) - 1 : -1), 0);
+    const roi = settled.length ? profit / settled.length : null;
+    root.innerHTML = `<div class="official-history-label"><span>Live meetreeks</span><b>Paper trade</b></div><div class="official-history-metrics"><div><span>Afgewikkeld</span><b>${settled.length}</b></div><div><span>Goed</span><b>${hits}</b></div><div><span>Flat-stake ROI</span><b class="${roi != null && roi < 0 ? "negative" : "positive"}">${roi == null ? "—" : signedPercent(roi)}</b></div><div><span>Nog open</span><b>${open}</b></div></div><p>Deze reeks staat volledig los van de Modelverkenner. “Bewezen” verschijnt pas na voldoende live bets én positieve closing-line value.</p>`;
   }
 
   function quickFixtureTips(fixture) {
@@ -288,34 +317,40 @@
     const root = document.getElementById("daily-picks");
     const dateLabel = document.getElementById("daily-date");
     if (!root || !dateLabel) return;
-    const today = localTodayKey();
-    const todayFixtures = DATA.filter(fixture => fixture.date === today);
-    const picks = dailySelections();
-    dateLabel.textContent = longDate(today);
+    const focusDate = officialFocusDate();
+    const focusFixtures = DATA.filter(fixture => fixture.date === focusDate && isPreMatch(fixture));
+    const picks = officialSelections();
+    dateLabel.textContent = longDate(focusDate);
     currentDailyCombo = null;
-    if (!todayFixtures.length) {
-      root.innerHTML = `<div class="daily-empty">Vandaag staan er geen wedstrijden uit de gevolgde competities op het programma.</div>`;
+    if (!focusFixtures.length) {
+      root.innerHTML = `<div class="daily-empty official-empty"><b>Geen komende wedstrijden</b><span>Zodra het programma en actuele Bet365-odds beschikbaar zijn, wordt de officiële selectie opnieuw berekend.</span></div>`;
       return;
     }
     if (!picks.length) {
-      root.innerHTML = `<div class="daily-empty">Vandaag voldoet geen selectie aan alle grenzen voor historie, modelkans, marktverschil en actuele ${esc(state.bookmaker)}-odd. Het model forceert geen bet.</div>`;
+      root.innerHTML = `<div class="daily-empty official-empty"><b>Geen officiële bet voor deze speeldag</b><span>Geen selectie houdt minimaal 2% verwachte waarde over na marktcorrectie, datakwaliteit en signaalvalidatie. In de Modelverkenner hieronder blijven alle percentages zichtbaar.</span></div>`;
       return;
     }
     const singles = picks.map((item, index) => {
       const shortReason = modelReason(item.fixture, item.key, item.probability).split(" Herleiding:")[0];
-      return `<article class="daily-pick"><div class="daily-pick-head"><span>Single ${index + 1} · ${esc(item.category)}</span><b>${pct1(item.probability)}</b></div><h3>${esc(marketLabel(item.key, item.fixture))}</h3><p class="daily-fixture">${esc(teamName(item.fixture.home))} – ${esc(teamName(item.fixture.away))} · ${esc(item.fixture.kickoff || "tijd n.n.b.")}</p><p class="daily-reason">${esc(shortReason)}</p><div class="daily-metrics"><span>Break-even <b>${pct1(item.breakEven)}</b></span><span>Model-EV <b>${signedPercent(item.expectedValue)}</b></span></div>${oddBlock(item.fixture, { key: item.key, p: item.probability })}<button class="daily-detail" type="button" data-open-match="${esc(item.fixture.id)}" data-open-market="${esc(item.key)}">Volledige onderbouwing</button></article>`;
+      const price = Number(item.odd.o);
+      const priceAction = item.executable
+        ? `<button class="odd-pill value official-odd" type="button" data-add-bet data-fixture-id="${esc(item.fixture.id)}" data-selection-key="${esc(item.key)}" data-bookmaker="Bet365" data-model-probability="${item.adjustedProbability}" title="Conservatieve kans ${pct1(item.adjustedProbability)} · break-even ${pct1(item.breakEven)}"><b>@ ${oddText(price)}</b><small>Bet365 nu · break-even ${pct1(item.breakEven)}</small><i>+ bet</i></button>`
+        : `<button class="odd-pill official-odd official-odd-unavailable" type="button" disabled><b>@ ${oddText(item.issuedOdd)}</b><small>Uitgegeven odd · huidige prijs niet meer plaatsbaar</small><i>volgen</i></button>`;
+      const evLabel = item.executable ? "EV bij huidige odd" : "EV bij uitgifte";
+      return `<article class="daily-pick official-pick"><div class="daily-pick-head"><span>Officiële single ${index + 1} · ${esc(item.category)}</span><b>${item.frozen ? "VASTGEZET" : "MEETFASE"}</b></div><h3>${esc(marketLabel(item.key, item.fixture))}</h3><p class="daily-fixture">${esc(teamName(item.fixture.home))} – ${esc(teamName(item.fixture.away))} · ${esc(item.fixture.kickoff || "tijd n.n.b.")}</p><p class="daily-reason">${esc(shortReason)} Het ruwe modelvoordeel is conservatief teruggeschoven richting de markt.</p><div class="daily-metrics official-metrics"><span>Ruw model <b>${pct1(item.probability)}</b></span><span>Markt zonder marge <b>${pct1(item.market)}</b></span><span>Conservatieve kans <b>${pct1(item.adjustedProbability)}</b></span><span>${evLabel} <b>${signedPercent(item.expectedValue)}</b></span></div>${priceAction}<button class="daily-detail" type="button" data-open-match="${esc(item.fixture.id)}" data-open-market="${esc(item.key)}">Volledige onderbouwing</button></article>`;
     }).join("");
     let combination = "";
-    if (picks.length >= 2) {
-      const legs = picks.slice(0, 2);
+    const executablePicks = picks.filter(item => item.executable);
+    if (executablePicks.length >= 2) {
+      const legs = executablePicks.slice(0, 2);
       const combinedOdd = legs.reduce((total, item) => total * Number(item.odd.o), 1);
-      const combinedProbability = legs.reduce((total, item) => total * item.probability, 1);
+      const combinedProbability = legs.reduce((total, item) => total * item.adjustedProbability, 1);
       const combinedFair = legs.every(item => item.market != null) ? legs.reduce((total, item) => total * item.market, 1) : null;
       currentDailyCombo = {
-        description: `Dagcombi · ${longDate(today)}`,
-        eventDate: today,
+        description: `Officiële paper-tradecombi · ${longDate(focusDate)}`,
+        eventDate: focusDate,
         selection: legs.map(item => marketLabel(item.key, item.fixture)).join(" + "),
-        bookmaker: state.bookmaker,
+        bookmaker: "Bet365",
         odds: combinedOdd,
         modelProbability: combinedProbability,
         fairMarketProbability: combinedFair,
@@ -324,7 +359,7 @@
       };
       const combinedBreakEven = 1 / combinedOdd;
       const combinedEV = combinedProbability * combinedOdd - 1;
-      combination = `<article class="daily-combo"><div><span>Optionele combi · hogere variantie</span><h3>${currentDailyCombo.legs.map(esc).join("<br>")}</h3><p>Kansen rekenkundig gecombineerd over twee verschillende wedstrijden; een combi is kwetsbaarder dan de singles.</p></div><div class="daily-combo-numbers"><span>Combi-odd <b>@${oddText(combinedOdd)}</b></span><span>Modelkans <b>${pct1(combinedProbability)}</b></span><span>Break-even <b>${pct1(combinedBreakEven)}</b></span><span>Model-EV <b>${signedPercent(combinedEV)}</b></span><button type="button" data-add-daily-combo>+ combi bijhouden</button></div></article>`;
+      combination = `<article class="daily-combo"><div><span>Optionele combi · hogere variantie</span><h3>${currentDailyCombo.legs.map(esc).join("<br>")}</h3><p>Alleen opgebouwd uit twee officiële singles op verschillende wedstrijden. De getoonde kans gebruikt de conservatief aangepaste kansen.</p></div><div class="daily-combo-numbers"><span>Combi-odd <b>@${oddText(combinedOdd)}</b></span><span>Conservatieve kans <b>${pct1(combinedProbability)}</b></span><span>Break-even <b>${pct1(combinedBreakEven)}</b></span><span>Officiële EV <b>${signedPercent(combinedEV)}</b></span><button type="button" data-add-daily-combo>+ combi bijhouden</button></div></article>`;
     }
     root.innerHTML = `<div class="daily-grid">${singles}</div>${combination}`;
   }
@@ -636,7 +671,7 @@
       renderAll();
       return;
     }
-    const probability = Number((fixture.probs || {})[key] ?? fixture.tips.find(tip => tip.raw === key)?.p);
+    const probability = Number(button.dataset.modelProbability ?? (fixture.probs || {})[key] ?? fixture.tips.find(tip => tip.raw === key)?.p);
     if (found && Number.isFinite(probability)) window.AftrapAccount?.openFromTip(betPayload(fixture, key, probability, found));
   }
 
@@ -644,7 +679,7 @@
     if (currentDailyCombo) window.AftrapAccount?.openFromCombo(currentDailyCombo);
   }
 
-  function renderAll() { renderTips(); renderMatches(); renderDailyPicks(); renderTop10History(); renderScoreFeed(); }
+  function renderAll() { renderTips(); renderMatches(); renderDailyPicks(); renderOfficialHistory(); renderTop10History(); renderScoreFeed(); }
 
   document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", event => {

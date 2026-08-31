@@ -1,6 +1,7 @@
 import math
 import sqlite3
 import unittest
+from datetime import datetime
 
 import db as store
 from model import TeamRatings
@@ -10,8 +11,11 @@ from run_tips import (
     head_to_head_profile,
     matchday_label,
     model_history_summary,
+    official_recommendation_history,
+    select_official_recommendations,
     settle,
     store_daily_recommendations,
+    store_official_recommendations,
     team_season_profile,
     validate_dashboard_data,
 )
@@ -149,13 +153,29 @@ class SettlementTests(unittest.TestCase):
         )
         fixture = {
             "id": "fx-1", "date": "2026-08-30", "quality": 0.8,
-            "probs": {"home": 0.6, "draw": 0.2},
+            "effective_matches": {"home": 30, "away": 30},
+            "probs": {"home": 0.58, "draw": 0.2},
+            "tips": [{"raw": "home", "b": "medium", "r": "getoetst signaal"}],
             "odds": [
-                {"s": "home", "b": "Bet365", "o": 2.0},
+                {"s": "home", "b": "Bet365", "o": 2.0, "f": 0.5,
+                 "u": datetime.now().astimezone().isoformat()},
                 {"s": "draw", "b": "Andere", "o": 4.0},
             ],
         }
         self.assertEqual(store_daily_recommendations(conn, [fixture]), 1)
+        official = select_official_recommendations([fixture])
+        self.assertEqual(len(official), 1)
+        self.assertEqual(official[0]["category"], "Winnaar")
+        self.assertGreater(official[0]["adjusted_p"], 0.5)
+        self.assertEqual(store_official_recommendations(conn, official), 1)
+        official[0]["odd"]["o"] = 2.2
+        official[0]["p"] = 0.61
+        self.assertEqual(store_official_recommendations(conn, official), 0)
+        frozen = conn.execute(
+            "SELECT odd,model_probability FROM official_recommendations"
+        ).fetchone()
+        self.assertEqual(float(frozen["odd"]), 2.0)
+        self.assertEqual(float(frozen["model_probability"]), 0.58)
         conn.execute(
             "UPDATE fixtures SET home_goals=1,away_goals=0,home_goals_ht=0,away_goals_ht=0,status='FT' WHERE id=?",
             (fixture_id,),
@@ -164,6 +184,10 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(len(history), 1)
         self.assertTrue(history[0]["hit"])
         self.assertEqual(history[0]["o"], 2.0)
+        official_history = official_recommendation_history(conn)
+        self.assertEqual(len(official_history), 1)
+        self.assertTrue(official_history[0]["hit"])
+        self.assertEqual(official_history[0]["phase"], "paper_trade")
 
 
 if __name__ == "__main__":

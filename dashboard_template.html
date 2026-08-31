@@ -879,9 +879,47 @@
     .bet-model-context span { color: #5f7c6d; }
     .bet-model-context b { color: #126840; }
 
+    .official-shortlist { margin-top: 8px; padding: 22px; border: 0; background: linear-gradient(135deg,#111a2a 0%,#17283a 55%,#0d3b3a 100%); color: #fff; box-shadow: 0 22px 48px rgba(25,43,70,.16); }
+    .official-eyebrow { display: block; margin-bottom: 5px; color: #b7ff63; font-size: 8px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+    .official-shortlist .daily-head h2 { color: #fff; font-size: 22px; }
+    .official-shortlist .daily-head p { max-width: 720px; color: #a9b8c9; line-height: 1.55; }
+    .official-shortlist .daily-head > span { color: #b7ff63; }
+    .official-history { display: grid; grid-template-columns: 150px minmax(0,1fr) minmax(220px,.8fr); align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.09); border-radius: 14px; background: rgba(255,255,255,.045); }
+    .official-history-label span { display: block; color: #8195aa; font-size: 7px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+    .official-history-label b { display: block; margin-top: 4px; color: #b7ff63; font-size: 11px; }
+    .official-history-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+    .official-history-metrics > div { padding: 7px 9px; border-radius: 9px; background: rgba(255,255,255,.055); }
+    .official-history-metrics span { display: block; color: #8598ac; font-size: 6px; }
+    .official-history-metrics b { display: block; margin-top: 2px; color: #fff; font-family: var(--num); font-size: 10px; }
+    .official-history > p { margin: 0; color: #8194aa; font-size: 7px; line-height: 1.55; }
+    .official-pick { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.055); }
+    .official-pick .daily-pick-head { color: #8ea3b8; }
+    .official-pick .daily-pick-head b { padding: 4px 6px; border-radius: 6px; background: rgba(183,255,99,.12); color: #b7ff63; font-size: 7px; letter-spacing: .08em; }
+    .official-pick h3 { color: #fff; }
+    .official-pick .daily-fixture { color: #a9b8c8; }
+    .official-pick .daily-reason { color: #8ea1b5; }
+    .official-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .official-metrics span { background: rgba(255,255,255,.06); color: #8397ac; }
+    .official-metrics b { color: #fff; }
+    .official-odd { width: 100%; border-color: rgba(183,255,99,.28) !important; background: rgba(183,255,99,.13) !important; color: #eaffd1 !important; }
+    .official-odd small,.official-odd i { color: #b7d59a !important; }
+    .official-odd-unavailable { cursor: not-allowed; opacity: .62; border-color: rgba(255,255,255,.12) !important; background: rgba(255,255,255,.045) !important; }
+    .official-odd-unavailable small,.official-odd-unavailable i { color: #8fa1b5 !important; }
+    .official-pick .daily-detail { color: #74ccff; }
+    .official-empty { display: grid; gap: 5px; border: 1px dashed rgba(255,255,255,.13); background: rgba(255,255,255,.045); color: #fff; }
+    .official-empty b { font-size: 12px; }
+    .official-empty span { color: #92a5b8; font-size: 8px; line-height: 1.55; }
+    .explorer-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-top: 6px; padding: 5px 2px 0; }
+    .explorer-heading span,.section-kicker { display: block; margin-bottom: 4px; color: #1769e0; font-size: 8px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+    .explorer-heading h2 { margin: 0; color: #272b36; font-size: 19px; letter-spacing: -.035em; }
+    .explorer-heading p { margin: 4px 0 0; color: #778194; font-size: 9px; }
+    .explorer-heading > b { padding: 6px 9px; border-radius: 999px; background: #eaf2ff; color: #1769e0; font-size: 7px; letter-spacing: .06em; text-transform: uppercase; }
+
     @media (max-width: 860px) {
       .dashboard-stat { min-height: 218px; }
       .match-overview { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .official-history { grid-template-columns: 120px minmax(0,1fr); }
+      .official-history > p { grid-column: 1 / -1; }
     }
     @media (max-width: 620px) {
       .topbar { background: rgba(255,255,255,.97); }
@@ -901,6 +939,14 @@
       .detail-section { box-shadow: none; }
       .match-overview { grid-template-columns: 1fr; }
       .auth-card { background: rgba(255,255,255,.95); }
+      .official-shortlist { padding: 16px; border-radius: 20px; }
+      .official-shortlist .daily-head { align-items: start; }
+      .official-shortlist .daily-head h2 { font-size: 19px; }
+      .official-history { grid-template-columns: 1fr; }
+      .official-history-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .official-history > p { grid-column: auto; }
+      .explorer-heading { align-items: start; }
+      .explorer-heading > b { display: none; }
     }
   </style>
 </head>
@@ -930,20 +976,21 @@
         <div>
           <span class="dashboard-kicker">Programma __MATCHDAY__</span>
           <h1>Matchday dashboard</h1>
-          <p>De sterkste modelkansen en prijswaarde van dit programma.</p>
+          <p>Eerst de strenge officiële meetreeks; daarna alle modelkansen om zelf te verkennen.</p>
         </div>
         <div class="dashboard-status"><span class="status-pill live"><i></i>Odds live</span><span class="status-pill verified" id="model-health">Rekencheck wordt uitgevoerd</span><span class="status-pill history">__HISTORY__</span></div>
       </div>
+      <section class="daily-shortlist official-shortlist" aria-labelledby="daily-title"><div class="daily-head"><div><span class="official-eyebrow">Officiële meetreeks · Bet365</span><h2 id="daily-title">Onze selecties</h2><p>Maximaal drie singles. Alleen een gevalideerd signaal met voldoende historie en conservatief positieve prijswaarde wordt toegelaten.</p></div><span id="daily-date"></span></div><div class="official-history" id="official-history"></div><div id="daily-picks"></div></section>
+      <div class="explorer-heading"><div><span>Modelverkenner</span><h2>Alle kansen blijven beschikbaar</h2><p>Deze blokken en ranglijsten zijn analyse, geen automatisch betadvies.</p></div><b>Niet geforceerd</b></div>
       <div class="dashboard-stats" id="dashboard-stats"></div>
       <div class="dashboard-secondary">
-        <section class="top10-panel" aria-labelledby="top10-title"><div class="compact-panel-head"><div><h2 id="top10-title">Top 10-resultaten</h2><p>Dagelijks vooraf vastgezet en automatisch afgewikkeld.</p></div><span id="top10-threshold"></span></div><div class="top10-results" id="top10-results"></div></section>
-        <section class="score-feed-panel" aria-labelledby="score-feed-title"><div class="compact-panel-head"><div><h2 id="score-feed-title">Wedstrijden</h2><p>Programma met per duel de sterkste korte modeltips.</p></div><span id="score-feed-date"></span></div><div class="score-feed" id="score-feed"></div></section>
+        <section class="top10-panel" aria-labelledby="top10-title"><div class="compact-panel-head"><div><h2 id="top10-title">Modelverkenner · Top 10</h2><p>Dagelijks vooraf vastgezet, maar niet gelijk aan onze officiële selecties.</p></div><span id="top10-threshold"></span></div><div class="top10-results" id="top10-results"></div></section>
+        <section class="score-feed-panel" aria-labelledby="score-feed-title"><div class="compact-panel-head"><div><h2 id="score-feed-title">Wedstrijden & modeltips</h2><p>Het programma met per duel de sterkste korte analyse.</p></div><span id="score-feed-date"></span></div><div class="score-feed" id="score-feed"></div></section>
       </div>
-      <section class="daily-shortlist" aria-labelledby="daily-title"><div class="daily-head"><div><h2 id="daily-title">Tips van vandaag</h2><p>Maximaal drie modelsingles; alleen bij voldoende historie en actuele value. Geen bet wordt geforceerd.</p></div><span id="daily-date"></span></div><div id="daily-picks"></div></section>
     </section>
     <section class="workspace" aria-label="Voetbaltips">
       <nav class="view-tabs" aria-label="Weergave" role="tablist">
-        <button class="view-tab active" id="tab-tips" data-view="tips" role="tab" aria-selected="true" aria-controls="tips-view"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 16l5-5 4 4 7-8M16 7h4v4"/></svg><span>Uitgelicht <span class="count" id="tip-count"></span></span></button>
+        <button class="view-tab active" id="tab-tips" data-view="tips" role="tab" aria-selected="true" aria-controls="tips-view"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 16l5-5 4 4 7-8M16 7h4v4"/></svg><span>Modelverkenner <span class="count" id="tip-count"></span></span></button>
         <button class="view-tab" id="tab-matches" data-view="matches" role="tab" aria-selected="false" aria-controls="matches-view"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 011 1v14H4V6a1 1 0 011-1z"/></svg><span>Wedstrijden <span class="count" id="match-count"></span></span></button>
         <button class="view-tab" id="tab-bets" data-view="bets" role="tab" aria-selected="false" aria-controls="bets-view"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg><span>Onze bets</span></button>
       </nav>
@@ -958,9 +1005,9 @@
         </div>
       </div>
       <section id="tips-view" role="tabpanel" aria-labelledby="tab-tips">
-        <div class="section-head"><div><h2>Beste kansen boven je minimum odd</h2><p id="ranking-description">Alle actuele markten, gesorteerd op hoogste modelkans.</p></div><div class="result-count" id="tip-result-count"></div></div>
+        <div class="section-head"><div><span class="section-kicker">Vrij verkennen · geen officiële selectie</span><h2>Alle modelkansen boven je minimum odd</h2><p id="ranking-description">Alle actuele markten, gesorteerd op hoogste modelkans.</p></div><div class="result-count" id="tip-result-count"></div></div>
         <div class="chance-ranking" id="chance-ranking"></div><div class="more-wrap hidden" id="more-wrap"><button class="more-button" id="more-button">Toon alle selecties</button></div>
-        <div class="section-head signal-section-head"><div><h2>Uitgelichte signaalwedstrijden</h2><p>Drie modeltips per wedstrijd: hoofdselectie, fulltime en BTTS.</p></div></div>
+        <div class="section-head signal-section-head"><div><h2>Uitgelichte modelsignalen</h2><p>Analyse per wedstrijd; alleen de sectie “Onze selecties” bovenaan is officieel.</p></div></div>
         <div class="pick-grid" id="pick-grid"></div>
       </section>
       <section id="matches-view" class="hidden" role="tabpanel" aria-labelledby="tab-matches">
@@ -1004,15 +1051,15 @@
     <div class="dialog-head"><div><small>Aftrap in één minuut</small><h2 id="help-dialog-title">Zo lees je de selecties</h2></div><button class="dialog-close" id="close-help" aria-label="Sluiten">×</button></div>
     <div class="dialog-body">
       <div class="how-list">
-        <div class="how-step"><b>Begin bij de kansenlijst</b><p>Aftrap gebruikt __HISTORY__, maar laat in de toplijsten alleen wedstrijden met voldoende gewogen topcompetitiehistorie en actuele odds zien.</p></div>
-        <div class="how-step"><b>Lees de drie regels als één modelbeeld</b><p>De hoofdselectie komt uit een historisch getoetst signaal. Fulltime en BTTS zijn aanvullende modelmarkten; dat is geen bewijs van winstgevendheid.</p></div>
+        <div class="how-step"><b>Begin bij ‘Onze selecties’</b><p>Dit is de strenge, apart gemeten paper-trade-laag. Aftrap toont per speeldag maximaal één winnaar-, goals- en BTTS-selectie — en toont bewust niets wanneer geen markt door alle controles komt.</p></div>
+        <div class="how-step"><b>Gebruik de Modelverkenner voor analyse</b><p>De vier inzichten, wedstrijdlijst en brede kansrangschikking laten zien wat het model berekent. Ze blijven handig om wedstrijden te onderzoeken, maar zijn geen automatisch betadvies.</p></div>
         <div class="how-step"><b>Open de cijfers als je alles wilt zien</b><p>Onder iedere wedstrijd staan alle 1X2-, Over/Under-, BTTS- en verwachte-goalscijfers, plus recente schotvorm van spelers als die beschikbaar is.</p></div>
         <div class="how-step"><b>Lees value als verwachte waarde</b><p>EV = modelkans × aangeboden odd − 1. +8% EV betekent theoretisch € 0,08 verwachte opbrengst per ingezette euro; het blijft een modelschatting, geen garantie.</p></div>
         <div class="how-step"><b>Break-even is de minimale benodigde trefkans</b><p>Break-even = 1 ÷ odd. Bij odd 2,00 is dat 50%; bij 1,50 is dat 66,7%. Alleen als de modelkans hoger ligt, is de berekende EV positief.</p></div>
-        <div class="how-step"><b>De dagselectie forceert niets</b><p>Aftrap kiest maximaal één winnaar-, goals- en BTTS-single met voldoende historie, een actuele bookmakerquote en begrensde modelafwijking. De optionele combi gebruikt twee verschillende wedstrijden en heeft meer variantie.</p></div>
+        <div class="how-step"><b>De officiële selectie forceert niets</b><p>Een selectie vereist een gevalideerd signaal, voldoende effectieve historie, een recente Bet365-quote en minimaal 2% conservatief berekende EV. De kans wordt eerst richting de markt afgezwakt; de optionele combi gebruikt twee verschillende wedstrijden en heeft meer variantie.</p></div>
         <div class="how-step"><b>Houd jullie keuzes samen bij</b><p>Onder ‘Onze bets’ beheren beide accounts dezelfde inzetten en resultaten. Met drie wat-als scenario’s vergelijk je vooraf bankroll, rendement en risico.</p></div>
       </div>
-      <p class="dialog-note"><b>Belangrijk:</b> De marktensommen worden automatisch gecontroleerd, maar niet iedere modelmarkt is al afzonderlijk historisch gekalibreerd. Odds worden iedere drie uur ververst. Aftrap geeft geen inzetadvies; een hoge modelkans of positieve EV is geen garantie op winst.</p>
+      <p class="dialog-note"><b>Belangrijk:</b> De officiële laag blijft paper trade totdat een ruime live steekproef zowel rendement als marktvoorsprong bevestigt. De marktensommen worden automatisch gecontroleerd, maar niet iedere modelmarkt is al afzonderlijk historisch gekalibreerd. Odds worden iedere drie uur ververst. Aftrap geeft geen garantie op winst.</p>
     </div>
   </dialog>
   <dialog class="match-dialog" id="match-dialog" aria-labelledby="match-dialog-title">
@@ -1085,8 +1132,8 @@
     helpDialog.addEventListener("click",event=>{if(event.target===helpDialog)helpDialog.close();});
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
-  <script src="aftrap-data.js?v=20260830-4"></script>
-  <script src="aftrap-app.js?v=20260830-4"></script>
+  <script src="aftrap-data.js?v=20260831-6"></script>
+  <script src="aftrap-app.js?v=20260831-6"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260830-1"></script>
 </body>

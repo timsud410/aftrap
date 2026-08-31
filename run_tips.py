@@ -54,6 +54,19 @@ MONTH_LABELS = (
 # xG-bronnen in volgorde van betrouwbaarheid.
 XG_PREFERENCE = ("understat", "api_football", "sot_proxy")
 
+# Conservatieve paper-tradelaag. Deze grenzen maken geen winstclaim: ze zorgen
+# ervoor dat alleen vooraf gevalideerde signalen met uitvoerbare prijswaarde
+# worden gemeten. Pas voldoende live rendement én closing-line value kan deze
+# laag later van 'meetfase' naar 'bewezen' promoveren.
+OFFICIAL_MIN_QUALITY = 0.62
+OFFICIAL_MIN_EFFECTIVE_MATCHES = 10.0
+OFFICIAL_MIN_ODD = 1.30
+OFFICIAL_MAX_ODD = 2.50
+OFFICIAL_MIN_ADJUSTED_EV = 0.02
+OFFICIAL_MAX_ADJUSTED_EV = 0.12
+OFFICIAL_MAX_MARKET_GAP = 0.10
+OFFICIAL_SIGNAL_BANDS = {"high", "medium"}
+
 # De eerste dagelijkse meting is hersteld uit het onveranderlijke GitHub
 # Pages-artifact dat op 30 augustus 2026 om 17:37 lokale tijd is gepubliceerd.
 # Alle onderstaande wedstrijden moesten toen nog beginnen en hadden nog geen
@@ -748,6 +761,125 @@ def recent_settlements(conn: sqlite3.Connection, lookback_days: int = 400) -> li
     return result
 
 
+def official_category(selection_key: str) -> tuple[str, float] | None:
+    """Geef categorie en minimale ruwe modelkans voor de officiële laag."""
+    if selection_key in {"home", "away"}:
+        return "Winnaar", 0.50
+    if selection_key in {"btts_yes", "btts_no"}:
+        return "BTTS", 0.52
+    if selection_key.startswith(("over_", "under_", "home_over_", "home_under_", "away_over_", "away_under_")):
+        return "Goals", 0.52
+    return None
+
+
+def select_official_recommendations(
+    fixtures: list[dict], bookmaker: str = "Bet365", now: datetime | None = None
+) -> list[dict]:
+    """Selecteer maximaal drie conservatieve paper-trades per speeldag.
+
+    De bookmakerkans is het anker. De modelafwijking wordt op basis van
+    datakwaliteit en effectieve historie teruggeschoven richting de markt.
+    Alleen wanneer daarna nog minimaal 2% uitvoerbare EV overblijft, kan een
+    vooraf walk-forward-gevalideerd signaal de officiële meetreeks in.
+    """
+    checked_at = now or datetime.now().astimezone()
+    by_day: dict[str, list[dict]] = {}
+    for fixture in fixtures:
+        fixture["official"] = []
+        quality = float(fixture.get("quality") or 0.0)
+        effective = fixture.get("effective_matches") or {}
+        minimum_history = min(
+            float(effective.get("home") or 0.0),
+            float(effective.get("away") or 0.0),
+        )
+        if quality < OFFICIAL_MIN_QUALITY or minimum_history < OFFICIAL_MIN_EFFECTIVE_MATCHES:
+            continue
+        validated = {
+            str(tip.get("raw")): tip
+            for tip in fixture.get("tips") or []
+            if str(tip.get("b") or "") in OFFICIAL_SIGNAL_BANDS
+        }
+        odds_by_key: dict[str, dict] = {}
+        for odd in fixture.get("odds") or []:
+            if str(odd.get("b") or "").casefold() != bookmaker.casefold() or not odd.get("s"):
+                continue
+            try:
+                updated = datetime.fromisoformat(str(odd["u"]))
+                age_hours = (checked_at - updated).total_seconds() / 3600
+            except (KeyError, TypeError, ValueError):
+                continue
+            if age_hours < -0.1 or age_hours > 6:
+                continue
+            key = str(odd["s"])
+            if key not in odds_by_key or float(odd["o"]) > float(odds_by_key[key]["o"]):
+                odds_by_key[key] = odd
+        for key, probability_value in (fixture.get("probs") or {}).items():
+            rule = official_category(str(key))
+            tip = validated.get(str(key))
+            odd = odds_by_key.get(str(key))
+            if rule is None or tip is None or odd is None or odd.get("f") is None:
+                continue
+            category, minimum_probability = rule
+            probability = float(probability_value)
+            price = float(odd["o"])
+            market = float(odd["f"])
+            market_gap = probability - market
+            if (
+                probability < minimum_probability
+                or price < OFFICIAL_MIN_ODD
+                or price > OFFICIAL_MAX_ODD
+                or market_gap < 0.015
+                or market_gap > OFFICIAL_MAX_MARKET_GAP
+            ):
+                continue
+            reliability = max(
+                0.45,
+                min(0.80, 0.35 + quality * 0.35 + min(minimum_history, 60.0) / 120.0 * 0.20),
+            )
+            adjusted_probability = market + reliability * market_gap
+            adjusted_ev = adjusted_probability * price - 1
+            if adjusted_ev < OFFICIAL_MIN_ADJUSTED_EV or adjusted_ev > OFFICIAL_MAX_ADJUSTED_EV:
+                continue
+            candidate = {
+                "key": str(key),
+                "category": category,
+                "p": round(probability, 4),
+                "market": round(market, 4),
+                "adjusted_p": round(adjusted_probability, 4),
+                "ev": round(adjusted_ev, 4),
+                "raw_ev": round(probability * price - 1, 4),
+                "odd": odd,
+                "signal_band": str(tip["b"]),
+                "signal_reason": str(tip.get("r") or ""),
+                "reliability": round(reliability, 4),
+                "phase": "paper_trade",
+                "fixture": fixture,
+            }
+            by_day.setdefault(str(fixture["date"]), []).append(candidate)
+
+    selected: list[dict] = []
+    category_order = ("Winnaar", "Goals", "BTTS")
+    for day in sorted(by_day):
+        used_fixtures: set[str] = set()
+        for category in category_order:
+            choices = sorted(
+                (item for item in by_day[day] if item["category"] == category),
+                key=lambda item: (item["ev"], item["adjusted_p"], item["p"]),
+                reverse=True,
+            )
+            choice = next(
+                (item for item in choices if str(item["fixture"]["id"]) not in used_fixtures),
+                None,
+            )
+            if choice is None:
+                continue
+            used_fixtures.add(str(choice["fixture"]["id"]))
+            public = {key: value for key, value in choice.items() if key != "fixture"}
+            choice["fixture"]["official"].append(public)
+            selected.append(choice)
+    return selected
+
+
 def store_daily_recommendations(
     conn: sqlite3.Connection,
     fixtures: list[dict],
@@ -809,6 +941,110 @@ def store_daily_recommendations(
             written += 1
     conn.commit()
     return written
+
+
+def store_official_recommendations(
+    conn: sqlite3.Connection, recommendations: list[dict], bookmaker: str = "Bet365"
+) -> int:
+    """Bevries maximaal één officiële paper-trade per categorie en speeldag.
+
+    Een eenmaal gepubliceerde winnaar-, goals- of BTTS-selectie wordt niet
+    vervangen door een latere modelrun. Zo blijft de meetreeks exact gelijk
+    aan wat de gebruiker als eerste officiële selectie heeft kunnen zien.
+    """
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    written = 0
+    for item in recommendations:
+        fixture = item["fixture"]
+        external_id = str(fixture.get("id") or "")
+        if external_id.startswith("local-"):
+            fixture_id = int(external_id.removeprefix("local-"))
+        else:
+            row = conn.execute(
+                """SELECT fixture_id FROM fixture_external_ids
+                   WHERE source='api_football' AND external_id=?""",
+                (external_id,),
+            ).fetchone()
+            if not row:
+                continue
+            fixture_id = int(row["fixture_id"])
+        pending = conn.execute(
+            """SELECT 1 FROM fixtures WHERE id=? AND home_goals IS NULL
+               AND away_goals IS NULL AND status IN ('NS','TBD')""",
+            (fixture_id,),
+        ).fetchone()
+        if not pending:
+            continue
+        already_frozen = conn.execute(
+            """SELECT 1 FROM official_recommendations
+               WHERE recommendation_date=?
+                 AND (category=? OR fixture_id=?)
+               LIMIT 1""",
+            (fixture["date"], item["category"], fixture_id),
+        ).fetchone()
+        if already_frozen:
+            continue
+        conn.execute(
+            """INSERT OR IGNORE INTO official_recommendations
+               (recommendation_date,fixture_id,selection_key,category,
+                bookmaker_name,odd,model_probability,market_probability,
+                adjusted_probability,expected_value,quality,signal_band,
+                first_seen_at,last_seen_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                fixture["date"], fixture_id, item["key"], item["category"],
+                bookmaker, float(item["odd"]["o"]), item["p"], item["market"],
+                item["adjusted_p"], item["ev"], float(fixture.get("quality") or 0.0),
+                item["signal_band"], now, now,
+            ),
+        )
+        written += 1
+    conn.commit()
+    return written
+
+
+def official_recommendation_history(
+    conn: sqlite3.Connection, lookback_days: int = 365
+) -> list[dict]:
+    """Vooraf vastgezette officiële selecties met latere afwikkeling."""
+    cutoff = (date.today() - timedelta(days=lookback_days)).isoformat()
+    rows = conn.execute(
+        """SELECT r.recommendation_date,r.selection_key,r.category,
+                  r.bookmaker_name,r.odd,r.model_probability,
+                  r.market_probability,r.adjusted_probability,r.expected_value,
+                  r.quality,r.signal_band,r.first_seen_at,
+                  f.home_goals,f.away_goals,f.home_goals_ht,f.away_goals_ht,
+                  th.name home,ta.name away,x.external_id
+           FROM official_recommendations r
+           JOIN fixtures f ON f.id=r.fixture_id
+           JOIN teams th ON th.id=f.home_team_id
+           JOIN teams ta ON ta.id=f.away_team_id
+           LEFT JOIN fixture_external_ids x ON x.fixture_id=f.id
+             AND x.source='api_football'
+           WHERE r.recommendation_date>=?
+           ORDER BY r.recommendation_date DESC,r.expected_value DESC""",
+        (cutoff,),
+    ).fetchall()
+    result = []
+    for row in rows:
+        played = row["home_goals"] is not None and row["away_goals"] is not None
+        hit = settle(
+            row["selection_key"], int(row["home_goals"] or 0),
+            int(row["away_goals"] or 0), row["home_goals_ht"], row["away_goals_ht"],
+        ) if played else None
+        result.append({
+            "d": row["recommendation_date"], "id": row["external_id"] or "",
+            "h": row["home"], "a": row["away"], "s": row["selection_key"],
+            "c": row["category"], "b": row["bookmaker_name"],
+            "o": round(float(row["odd"]), 3),
+            "p": round(float(row["model_probability"]), 4),
+            "mp": round(float(row["market_probability"]), 4),
+            "ap": round(float(row["adjusted_probability"]), 4),
+            "ev": round(float(row["expected_value"]), 4),
+            "q": round(float(row["quality"]), 2), "band": row["signal_band"],
+            "hit": hit, "seen": row["first_seen_at"], "phase": "paper_trade",
+        })
+    return result
 
 
 def daily_recommendation_history(
@@ -1161,9 +1397,12 @@ def main_with_args(
         print("\nGeen wedstrijden om te tonen. Probeer een andere datum met --date.")
         return 1
 
+    official = select_official_recommendations(fixtures)
     if forward:
         stored = store_daily_recommendations(conn, fixtures)
         print(f"  Dagelijkse aanbevelingssnapshot: {stored} Bet365-selecties bijgewerkt")
+        official_stored = store_official_recommendations(conn, official)
+        print(f"  Officiële meetreeks: {official_stored} strenge selecties bijgewerkt")
 
     integrity = validate_dashboard_data(fixtures)
     print(
@@ -1213,6 +1452,8 @@ def main_with_args(
         + json.dumps(recent_settlements(conn), ensure_ascii=False, separators=(",", ":"))
         + ";window.AFTRAP_RECOMMENDATION_HISTORY="
         + json.dumps(recommendation_history, ensure_ascii=False, separators=(",", ":"))
+        + ";window.AFTRAP_OFFICIAL_HISTORY="
+        + json.dumps(official_recommendation_history(conn), ensure_ascii=False, separators=(",", ":"))
         + ";\n"
     )
     (out.parent / "aftrap-data.js").write_text(data_js, encoding="utf-8")
