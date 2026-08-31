@@ -25,7 +25,7 @@
   const OFFICIAL_MIN_ODD = 1.30;
   const PAGE_SIZE = 20;
   let currentDailyCombo = null;
-  const state = { view: "tips", date: "all", league: "all", market: "all", bookmaker: "auto", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
+  const state = { view: "tips", date: "all", officialDate: null, league: "all", market: "all", bookmaker: "auto", sort: "probability", minimumOdd: 1.30, visibleCount: PAGE_SIZE, detailMarket: null };
   const TEAM_DISPLAY = {"Nott'm Forest":"Nottingham Forest","Man United":"Manchester United","Man City":"Manchester City","For Sittard":"Fortuna Sittard","Ath Madrid":"Atlético Madrid","Ath Bilbao":"Athletic Club","Sociedad":"Real Sociedad","Espanol":"Espanyol","Paris SG":"Paris Saint-Germain","M'gladbach":"Borussia M'gladbach","Ein Frankfurt":"Eintracht Frankfurt","FC Koln":"1. FC Köln","Nijmegen":"NEC Nijmegen","Den Haag":"ADO Den Haag","Zwolle":"PEC Zwolle","La Coruna":"Deportivo La Coruña","Santander":"Racing Santander"};
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
   const pct = value => Number.isFinite(Number(value)) ? `${Math.round(Number(value) * 100)}%` : "—";
@@ -164,11 +164,28 @@
     return ranking.sort((a, b) => b.probability - a.probability || b.expectedValue - a.expectedValue || Number(b.odd.o) - Number(a.odd.o));
   }
 
-  function officialFocusDate() {
+  function availableOfficialDates() {
     const today = localTodayKey();
-    const preMatchDates = [...new Set(DATA.filter(isPreMatch).map(fixture => fixture.date))].sort();
-    if (preMatchDates.includes(today)) return today;
-    return preMatchDates.find(day => day > today) || preMatchDates[0] || today;
+    const programmeDates = [...new Set(DATA.map(fixture => fixture.date).filter(day => day >= today))].sort();
+    return programmeDates.length ? programmeDates : [today];
+  }
+
+  function officialFocusDate() {
+    const dates = availableOfficialDates();
+    if (state.officialDate && dates.includes(state.officialDate)) return state.officialDate;
+    const today = localTodayKey();
+    state.officialDate = dates.includes(today) ? today : dates.find(day => day > today) || dates[0];
+    return state.officialDate;
+  }
+
+  function renderOfficialDateNav() {
+    const root = document.getElementById("official-date-nav");
+    if (!root) return;
+    const active = officialFocusDate();
+    root.innerHTML = availableOfficialDates().map(day => {
+      const hasPick = OFFICIAL_HISTORY.some(item => item.d === day) || DATA.some(fixture => fixture.date === day && (fixture.official || []).length);
+      return `<button class="official-date-chip ${day === active ? "active" : ""} ${hasPick ? "has-pick" : ""}" type="button" data-official-date="${esc(day)}" aria-pressed="${day === active ? "true" : "false"}">${esc(relativeDate(day))}</button>`;
+    }).join("");
   }
 
   function officialSelections() {
@@ -255,8 +272,8 @@
     const totalHits = all.filter(item => item.hit === true).length;
     const totalProfit = days.reduce((total, day) => total + day.profit, 0);
     const summary = `<div class="top10-summary"><div><span>Afgewikkeld</span><b>${all.length}</b></div><div><span>Goed</span><b>${totalHits}</b></div><div><span>Hitrate</span><b>${pct1(totalHits / all.length)}</b></div><div><span>Flat-stake ROI</span><b class="${totalProfit >= 0 ? "positive" : "negative"}">${signedPercent(totalProfit / all.length)}</b></div></div>`;
-    const rows = days.slice(0, 7).map(day => `<div class="top10-day"><span>${esc(shortDate(day.day))}${day.recovered ? " · hersteld archief" : ""}</span><b>${day.hits}/${day.settled.length} goed</b><em>${pct1(day.hits / day.settled.length)}</em><strong class="${day.profit >= 0 ? "positive" : "negative"}">${day.roi == null ? "—" : signedPercent(day.roi)} ROI</strong></div>`).join("");
-    root.innerHTML = `${summary}<div class="top10-days">${rows}</div><p class="top10-note">Elke selectie telt als één vaste eenheid inzet. De Top 10 wordt per dag bepaald uit vóór de aftrap opgeslagen kandidaten. De meting van 30 augustus is exact hersteld uit het gepubliceerde archief bij minimumodd @1,30; begonnen wedstrijden zijn uitgesloten.</p>`;
+    const rows = days.slice(0, 7).map(day => `<button class="top10-day" type="button" data-open-top10-archive="${esc(day.day)}" aria-label="Open resultaten van ${esc(longDate(day.day))}"><span>${esc(shortDate(day.day))}${day.recovered ? " · hersteld archief" : ""}</span><b>${day.hits}/${day.settled.length} goed</b><em>${pct1(day.hits / day.settled.length)}</em><strong class="${day.profit >= 0 ? "positive" : "negative"}">${day.roi == null ? "—" : signedPercent(day.roi)} ROI</strong><i>›</i></button>`).join("");
+    root.innerHTML = `${summary}<div class="top10-days">${rows}</div><p class="top10-note">Tik op een speeldag om alle goede en foute bets te bekijken. Elke selectie telt als één vaste eenheid inzet. De Top 10 wordt per dag bepaald uit vóór de aftrap opgeslagen kandidaten.</p>`;
   }
 
   function renderOfficialHistory() {
@@ -267,7 +284,53 @@
     const hits = settled.filter(item => item.hit === true).length;
     const profit = settled.reduce((total, item) => total + (item.hit ? Number(item.o) - 1 : -1), 0);
     const roi = settled.length ? profit / settled.length : null;
-    root.innerHTML = `<div class="official-history-label"><span>Live meetreeks</span><b>Paper trade</b></div><div class="official-history-metrics"><div><span>Afgewikkeld</span><b>${settled.length}</b></div><div><span>Goed</span><b>${hits}</b></div><div><span>Flat-stake ROI</span><b class="${roi != null && roi < 0 ? "negative" : "positive"}">${roi == null ? "—" : signedPercent(roi)}</b></div><div><span>Nog open</span><b>${open}</b></div></div><p>Deze reeks staat volledig los van de Modelverkenner. “Bewezen” verschijnt pas na voldoende live bets én positieve closing-line value.</p>`;
+    root.innerHTML = `<div class="official-history-label"><span>Live meetreeks</span><b>Paper trade</b></div><div class="official-history-metrics"><div><span>Afgewikkeld</span><b>${settled.length}</b></div><div><span>Goed</span><b>${hits}</b></div><div><span>Flat-stake ROI</span><b class="${roi != null && roi < 0 ? "negative" : "positive"}">${roi == null ? "—" : signedPercent(roi)}</b></div><div><span>Nog open</span><b>${open}</b></div></div><p>Deze reeks staat los van de Modelverkenner. <button type="button" data-open-official-archive>Bekijk alle officiële resultaten →</button></p>`;
+  }
+
+  function archiveResultRow(item, index, showDate = false) {
+    const fixture = { home: item.h, away: item.a };
+    const resultClass = item.hit === true ? "good" : item.hit === false ? "bad" : "open";
+    const resultLabel = item.hit === true ? "Goed" : item.hit === false ? "Fout" : "Open";
+    const returnValue = item.hit == null ? "nog niet gespeeld" : item.hit ? `+${oddText(Number(item.o) - 1)} unit` : "−1,00 unit";
+    const meta = [showDate ? shortDate(item.d) : null, item.c || marketGroup(item.s), `@${oddText(item.o)}`, item.b].filter(Boolean).join(" · ");
+    return `<div class="archive-row"><span class="archive-rank">#${Number(item.rank || index + 1)}</span><div class="archive-copy"><b>${esc(teamName(item.h))} – ${esc(teamName(item.a))}</b><span>${esc(marketLabel(item.s, fixture))}</span><span>${esc(meta)}</span></div><div class="archive-result ${resultClass}"><b>${resultLabel}</b><span>${esc(returnValue)}</span></div></div>`;
+  }
+
+  function showResultArchive({ kicker, title, meta, items, showDate = false }) {
+    const dialog = document.getElementById("archive-dialog");
+    const settled = items.filter(item => item.hit != null);
+    const hits = settled.filter(item => item.hit === true).length;
+    const profit = settled.reduce((total, item) => total + (item.hit ? Number(item.o) - 1 : -1), 0);
+    const roi = settled.length ? profit / settled.length : null;
+    document.getElementById("archive-dialog-kicker").textContent = kicker;
+    document.getElementById("archive-dialog-title").textContent = title;
+    document.getElementById("archive-dialog-meta").textContent = meta;
+    document.getElementById("archive-dialog-body").innerHTML = items.length
+      ? `<div class="archive-summary"><div><span>Afgewikkeld</span><b>${settled.length}</b></div><div><span>Goed</span><b>${hits}</b></div><div><span>Flat-stake ROI</span><b>${roi == null ? "—" : signedPercent(roi)}</b></div></div><div class="archive-list">${items.map((item, index) => archiveResultRow(item, index, showDate)).join("")}</div>`
+      : `<div class="daily-empty"><b>Nog geen officiële resultaten</b><span>Zodra een vastgezette selectie is gespeeld, verschijnt die hier als goed of fout.</span></div>`;
+    dialog.showModal();
+    dialog.scrollTop = 0;
+  }
+
+  function openTop10Archive(day) {
+    const result = historicalDailyTop10().find(item => item.day === day);
+    if (!result) return;
+    showResultArchive({
+      kicker: "Modelverkenner · vastgezette Top 10",
+      title: longDate(day),
+      meta: `${result.hits} van ${result.settled.length} goed · ${result.roi == null ? "geen ROI" : `${signedPercent(result.roi)} ROI`}`,
+      items: result.selected,
+    });
+  }
+
+  function openOfficialArchive() {
+    showResultArchive({
+      kicker: "Officiële meetreeks · paper trade",
+      title: "Alle officiële resultaten",
+      meta: "Vastgezet vóór de aftrap; nooit achteraf vervangen",
+      items: [...OFFICIAL_HISTORY].sort((a, b) => b.d.localeCompare(a.d) || Number(b.ev) - Number(a.ev)),
+      showDate: true,
+    });
   }
 
   function quickFixtureTips(fixture) {
@@ -679,7 +742,7 @@
     if (currentDailyCombo) window.AftrapAccount?.openFromCombo(currentDailyCombo);
   }
 
-  function renderAll() { renderTips(); renderMatches(); renderDailyPicks(); renderOfficialHistory(); renderTop10History(); renderScoreFeed(); }
+  function renderAll() { renderTips(); renderMatches(); renderOfficialDateNav(); renderDailyPicks(); renderOfficialHistory(); renderTop10History(); renderScoreFeed(); }
 
   document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", event => {
@@ -694,6 +757,11 @@
       }
       const chip = event.target.closest("[data-date]");
       if (chip) { state.date = chip.dataset.date; resetRanking(); document.querySelectorAll(".date-chip").forEach(node => node.classList.toggle("active", node === chip)); renderAll(); }
+      const officialDate = event.target.closest("[data-official-date]");
+      if (officialDate) { state.officialDate = officialDate.dataset.officialDate; renderOfficialDateNav(); renderDailyPicks(); }
+      const top10Archive = event.target.closest("[data-open-top10-archive]");
+      if (top10Archive) openTop10Archive(top10Archive.dataset.openTop10Archive);
+      if (event.target.closest("[data-open-official-archive]")) openOfficialArchive();
       const open = event.target.closest("[data-open-match]");
       if (open) openMatch(open.dataset.openMatch, open.dataset.openMarket || null);
       const market = event.target.closest("[data-detail-market]");
@@ -721,7 +789,8 @@
     document.getElementById("open-help").addEventListener("click", () => helpDialog.showModal());
     document.getElementById("close-help").addEventListener("click", () => helpDialog.close());
     document.getElementById("close-match-dialog").addEventListener("click", () => document.getElementById("match-dialog").close());
-    [helpDialog, document.getElementById("match-dialog")].forEach(dialog => dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); }));
+    document.getElementById("close-archive-dialog").addEventListener("click", () => document.getElementById("archive-dialog").close());
+    [helpDialog, document.getElementById("match-dialog"), document.getElementById("archive-dialog")].forEach(dialog => dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); }));
     if (DATA.length) {
       renderSummary(); renderFilters(); renderAll();
       window.setInterval(renderAll, 5 * 60 * 1000);

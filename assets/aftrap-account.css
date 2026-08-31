@@ -31,8 +31,8 @@
 .bet-kpi span { display: block; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .bet-kpi strong { display: block; margin-top: 8px; font-family: var(--num); font-size: 22px; font-weight: 500; }
 .bet-kpi small { display: block; margin-top: 5px; color: var(--muted); font-size: 8px; }
-.bets-layout { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(320px,.75fr); align-items: start; gap: 16px; }
-.bet-panel { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 19px; background: var(--paper); }
+.bets-layout { min-width: 0; max-width: 100%; display: grid; grid-template-columns: minmax(0,1.5fr) minmax(320px,.75fr); align-items: start; gap: 16px; }
+.bet-panel { min-width: 0; max-width: 100%; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 19px; background: var(--paper); }
 .bet-panel + .bet-panel { margin-top: 16px; }
 .bet-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
 .bet-panel-head h3 { margin: 0; font-size: 15px; }
@@ -106,7 +106,7 @@
   .bet-panel { padding: 14px; border-radius: 17px; }
   .bet-panel-head { align-items: start; flex-direction: column; }
   .bet-item { grid-template-columns: 1fr; }
-  .bet-numbers { justify-content: space-between; text-align: left; }
+  .bet-numbers { min-width: 0; flex-wrap: wrap; justify-content: space-between; text-align: left; }
   .bet-actions { grid-column: 1; }
   .bet-form-grid { grid-template-columns: 1fr; }
   .bet-label.full { grid-column: 1; }

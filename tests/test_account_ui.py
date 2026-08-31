@@ -22,9 +22,9 @@ class AccountUiTests(unittest.TestCase):
             'id="bet-form"',
             'id="scenario-bankroll"',
             'src="aftrap-account.js?v=20260830-1"',
-            'href="aftrap-account.css"',
-            'src="aftrap-app.js?v=20260831-6"',
-            'src="aftrap-data.js?v=20260831-6"',
+            'href="aftrap-account.css?v=20260831-7"',
+            'src="aftrap-app.js?v=20260831-7"',
+            'src="aftrap-data.js?v=20260831-7"',
             'id="match-dialog"',
         ):
             self.assertIn(marker, self.template)
@@ -96,6 +96,17 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("combinatie handmatig afwikkelen", self.account_js)
         self.assertIn("Break-even = 1 ÷ odd", self.template)
 
+    def test_official_dates_and_result_archives_are_interactive(self):
+        self.assertIn('id="official-date-nav"', self.template)
+        self.assertIn('id="archive-dialog"', self.template)
+        self.assertIn("renderOfficialDateNav", self.app_js)
+        self.assertIn("data-official-date", self.app_js)
+        self.assertIn("data-open-top10-archive", self.app_js)
+        self.assertIn("openTop10Archive", self.app_js)
+        self.assertIn("openOfficialArchive", self.app_js)
+        self.assertIn("Goed", self.app_js)
+        self.assertIn("Fout", self.app_js)
+
     def test_daily_top10_history_and_compact_score_feed_are_wired(self):
         self.assertIn('id="top10-results"', self.template)
         self.assertIn('id="score-feed"', self.template)
@@ -109,8 +120,8 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("top10-panel", self.template)
 
     def test_generated_data_uses_external_script_before_app(self):
-        data_script = 'src="aftrap-data.js?v=20260831-6"'
-        app_script = 'src="aftrap-app.js?v=20260831-6"'
+        data_script = 'src="aftrap-data.js?v=20260831-7"'
+        app_script = 'src="aftrap-app.js?v=20260831-7"'
         self.assertLess(self.template.index(data_script), self.template.index(app_script))
         self.assertNotIn("window.AFTRAP_DATA=/*__DATA__*/[]", self.template)
 
@@ -122,7 +133,6 @@ class AccountUiTests(unittest.TestCase):
         self.assertIn("b.probability - a.probability", self.app_js)
         self.assertIn("Number(odd.o) < state.minimumOdd", self.app_js)
         self.assertIn("filter(isPreMatch)", self.app_js)
-        self.assertIn("DATA.filter(isPreMatch)", self.app_js)
 
     def test_chance_ranking_odds_are_visible_on_light_rows(self):
         self.assertIn(".chance-row .odd-pill", self.template)
@@ -151,7 +161,9 @@ class AccountUiTests(unittest.TestCase):
 
     def test_mobile_dashboard_has_app_layout_and_live_statistics(self):
         self.assertIn("viewport-fit=cover", self.template)
-        self.assertIn("overflow-x: hidden", self.template)
+        self.assertIn("overflow-x: clip", self.template)
+        self.assertIn("overscroll-behavior-x: none", self.template)
+        self.assertIn("touch-action: pan-y", self.template)
         self.assertIn('id="dashboard-stats"', self.template)
         self.assertIn("renderDashboardStats", self.app_js)
         self.assertIn('label: "Winnaar value"', self.app_js)

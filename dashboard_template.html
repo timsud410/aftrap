@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="aftrap-account.css">
+  <link rel="stylesheet" href="aftrap-account.css?v=20260831-7">
   <style>
     :root {
       --navy: #0b1220; --navy-2: #131d30; --ink: #111827; --muted: #667085;
@@ -35,13 +35,14 @@
       --num: "DM Mono", ui-monospace, monospace;
     }
     * { box-sizing: border-box; }
-    html { width: 100%; max-width: 100%; overflow-x: hidden; scroll-behavior: smooth; background: var(--navy); }
-    body { width: 100%; max-width: 100%; min-height: 100vh; margin: 0; overflow-x: hidden; background: var(--navy); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+    html { width: 100%; max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; scroll-behavior: smooth; background: var(--navy); }
+    body { position: relative; width: 100%; max-width: 100%; min-height: 100vh; margin: 0; overflow-x: clip; overscroll-behavior-x: none; touch-action: pan-y; background: var(--navy); color: var(--ink); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+    img,svg { max-width: 100%; }
     button, select { font: inherit; }
     button { cursor: pointer; }
     .topbar { position: sticky; top: 0; z-index: 30; padding-top: env(safe-area-inset-top); background: rgba(11,18,32,.98); color: white; backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.08); }
-    .topbar-inner { max-width: 1180px; min-height: 68px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-    .brand { display: flex; align-items: center; gap: 12px; }
+    .topbar-inner { width: 100%; max-width: 1180px; min-width: 0; min-height: 68px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; overflow: hidden; }
+    .brand { min-width: 0; display: flex; align-items: center; gap: 12px; }
     .brand-mark { width: 38px; height: 38px; display: block; border-radius: 11px; object-fit: cover; box-shadow: 0 4px 14px rgba(0,0,0,.22); }
     .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -.04em; }
     .brand-tagline { padding-left: 12px; border-left: 1px solid rgba(255,255,255,.18); color: #aeb8c9; font-size: 12px; font-weight: 600; }
@@ -50,6 +51,7 @@
     .help-button { border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 8px 12px; background: transparent; color: white; font-size: 11px; font-weight: 800; }
     .help-button:hover { border-color: var(--lime); color: var(--lime); }
     .shell { width: 100%; max-width: 1180px; min-height: calc(100vh - 68px); margin: 0 auto; padding: 24px 24px 80px; overflow: hidden; background: var(--ground); }
+    .topbar,.shell,.dashboard-overview,.workspace,.daily-shortlist,.dashboard-secondary,.chance-ranking,.pick-grid,.matches,.bets-layout { min-width: 0; max-width: 100%; }
     .dashboard-overview { display: grid; gap: 16px; }
     .dashboard-title-row { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
     .dashboard-kicker { display: block; margin-bottom: 4px; color: #62813d; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -57,7 +59,7 @@
     .dashboard-title-row p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
     .dashboard-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
     .dashboard-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
-    .dashboard-stat { position: relative; min-width: 0; min-height: 148px; padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); color: var(--ink); text-align: left; }
+    .dashboard-stat { position: relative; min-width: 0; min-height: 148px; overflow: hidden; padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); color: var(--ink); text-align: left; }
     .dashboard-stat.primary { border-color: #c8e8a1; background: var(--lime-soft); }
     button.dashboard-stat { width: 100%; appearance: none; cursor: pointer; transition: border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
     button.dashboard-stat:hover { border-color: #9dcc63; box-shadow: 0 8px 20px rgba(11,18,32,.08); transform: translateY(-1px); }
@@ -73,6 +75,10 @@
     .daily-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
     .daily-head h2 { margin: 0; font-size: 19px; letter-spacing: -.035em; }
     .daily-head p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+    .official-date-nav { display: flex; flex-wrap: wrap; gap: 7px; }
+    .official-date-chip { min-height: 34px; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; padding: 7px 11px; background: rgba(255,255,255,.045); color: #91a4b8; font-size: 8px; font-weight: 800; }
+    .official-date-chip.active { border-color: rgba(183,255,99,.35); background: rgba(183,255,99,.13); color: #dcffc0; }
+    .official-date-chip.has-pick::after { content: ""; display: inline-block; width: 5px; height: 5px; margin-left: 6px; border-radius: 50%; background: var(--lime); vertical-align: 1px; }
     .daily-head > span { color: var(--blue); font-size: 10px; font-weight: 800; }
     .daily-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
     .daily-pick { min-width: 0; padding: 15px; border: 1px solid #e2e7ee; border-radius: 16px; background: #f9fafc; }
@@ -108,10 +114,12 @@
     .top10-summary b { display: block; margin-top: 4px; font-family: var(--num); font-size: 12px; }
     .negative { color: #cf4d55 !important; }
     .top10-days { margin-top: 9px; border-top: 1px solid var(--line); }
-    .top10-day { display: grid; grid-template-columns: 1fr 1fr .7fr 1fr; align-items: center; gap: 7px; padding: 8px 2px; border-bottom: 1px solid var(--line); font-size: 8px; }
+    .top10-day { width: 100%; display: grid; grid-template-columns: 1fr 1fr .7fr 1fr 14px; align-items: center; gap: 7px; padding: 9px 2px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: inherit; text-align: left; font-size: 8px; }
+    .top10-day:hover { background: rgba(23,105,224,.045); }
     .top10-day span { color: var(--muted); }
     .top10-day em { color: #556274; font-family: var(--num); font-style: normal; }
     .top10-day strong { text-align: right; }
+    .top10-day i { color: #1769e0; font-size: 13px; font-style: normal; text-align: right; }
     .top10-note { margin: 10px 2px 0; color: var(--muted); font-size: 7px; line-height: 1.5; }
     .top10-empty { display: grid; gap: 5px; padding: 15px; border-radius: 12px; background: #f4f7fb; }
     .top10-empty b { font-size: 10px; }
@@ -186,7 +194,7 @@
     .tip-line { display: grid; grid-template-columns: 86px minmax(0,1fr) auto auto; align-items: center; gap: 12px; min-height: 66px; padding: 11px 15px; border-top: 1px solid rgba(255,255,255,.09); }
     .tip-line:first-child { border-top: 0; }
     .tip-line.primary { background: rgba(183,243,107,.08); }
-    .tip-kind { color: #8f9db1; font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .tip-kind { min-width: 0; overflow: hidden; color: #8f9db1; font-size: 8px; font-weight: 800; letter-spacing: .08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
     .tip-line.primary .tip-kind { color: var(--lime); }
     .tip-line-name { overflow: hidden; font-size: 13px; font-weight: 800; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
     .tip-line-name small { display: block; margin-top: 4px; overflow: hidden; color: #91a0b5; font-size: 8px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
@@ -269,6 +277,26 @@
     .how-step p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
     .dialog-note { margin: 22px 0 0; padding: 14px; border-radius: 12px; background: #f2f4f6; color: #596270; font-size: 11px; line-height: 1.6; }
     .match-dialog { width: min(1120px,calc(100% - 28px)); max-height: calc(100vh - 28px); }
+    .archive-dialog { width: min(760px,calc(100% - 28px)); max-height: calc(100vh - 28px); overflow: hidden; }
+    .archive-dialog-body { max-height: min(68vh,720px); overflow: auto; padding: 20px 22px 24px; background: #f5f7fb; }
+    .archive-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-bottom: 13px; }
+    .archive-summary > div { min-width: 0; padding: 11px; border: 1px solid #e2e7ef; border-radius: 12px; background: #fff; }
+    .archive-summary span { display: block; color: #7a8596; font-size: 7px; font-weight: 800; text-transform: uppercase; }
+    .archive-summary b { display: block; margin-top: 4px; color: #263142; font-family: var(--num); font-size: 13px; }
+    .archive-list { display: grid; gap: 7px; }
+    .archive-row { display: grid; grid-template-columns: 35px minmax(0,1fr) auto; align-items: center; gap: 10px; min-width: 0; padding: 11px; border: 1px solid #e2e7ef; border-radius: 12px; background: #fff; }
+    .archive-rank { color: #8a95a5; font-family: var(--num); font-size: 9px; }
+    .archive-copy { min-width: 0; }
+    .archive-copy b,.archive-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .archive-copy b { color: #293345; font-size: 10px; }
+    .archive-copy span { margin-top: 3px; color: #758195; font-size: 8px; }
+    .archive-result { min-width: 66px; border-radius: 9px; padding: 8px; text-align: center; }
+    .archive-result.good { background: #edf9df; color: #4f791f; }
+    .archive-result.bad { background: #ffebed; color: #a23f49; }
+    .archive-result.open { background: #e9f2ff; color: #2965aa; }
+    .archive-result b,.archive-result span { display: block; }
+    .archive-result b { font-size: 9px; }
+    .archive-result span { margin-top: 2px; font-family: var(--num); font-size: 7px; }
     .match-dialog .dialog-head { position: sticky; top: 0; z-index: 2; }
     .match-dialog .dialog-head p { margin: 6px 0 0; color: #aeb8c9; font-size: 11px; }
     .match-dialog-body { display: grid; gap: 16px; padding: 22px; background: var(--ground); }
@@ -351,6 +379,7 @@
       .daily-combo-numbers button { grid-column: 1 / -1; }
       .dashboard-secondary { grid-template-columns: 1fr; }
       .top10-summary { grid-template-columns: 1fr 1fr; }
+      .top10-day { grid-template-columns: 1.15fr .9fr .7fr .9fr 10px; gap: 4px; }
       .score-feed { max-height: none; }
       .score-feed-row { grid-template-columns: 52px minmax(0,1fr) 10px; padding: 11px 9px; }
       .score-feed-tips { display: grid; grid-template-columns: 1fr; }
@@ -571,6 +600,9 @@
       body::before { background-size: 28px 28px; }
       .topbar { background: rgba(5,9,16,.96); }
       .topbar-inner { min-height: 64px; padding: 0 13px; gap: 10px; }
+      .brand { flex: 1; overflow: hidden; }
+      .brand > div { min-width: 0; }
+      .top-meta { flex: 0 0 auto; }
       .brand-mark { width: 39px; height: 39px; }
       .brand-name { font-size: 16px; }
       .brand-subline { font-size: 7px; }
@@ -622,6 +654,11 @@
       .tip-kind,.tip-line-name small,.stack-note { font-size: 8px; }
       .tip-line-name { font-size: 11px; }
       .match-dialog[open] { position: fixed; inset: env(safe-area-inset-top) 0 0; width: 100%; max-width: none; height: calc(100dvh - env(safe-area-inset-top)); max-height: none; margin: 0; border-width: 1px 0 0; border-radius: 24px 24px 0 0; }
+      .archive-dialog[open] { position: fixed; inset: env(safe-area-inset-top) 0 0; width: 100%; max-width: none; height: calc(100dvh - env(safe-area-inset-top)); max-height: none; margin: 0; border-width: 1px 0 0; border-radius: 24px 24px 0 0; }
+      .archive-dialog-body { max-height: none; height: calc(100% - 88px); padding: 12px 10px calc(22px + env(safe-area-inset-bottom)); }
+      .archive-summary { grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .archive-row { grid-template-columns: 28px minmax(0,1fr) 62px; gap: 7px; padding: 10px 8px; }
+      .player-row { grid-template-columns: minmax(0,1fr) repeat(3,42px); }
       .match-dialog .dialog-head { padding: 21px 18px 17px; }
       .dialog-head h2 { font-size: 23px; }
       .match-dialog-body { padding: 11px 10px calc(22px + env(safe-area-inset-bottom)); }
@@ -892,6 +929,7 @@
     .official-history-metrics span { display: block; color: #8598ac; font-size: 6px; }
     .official-history-metrics b { display: block; margin-top: 2px; color: #fff; font-family: var(--num); font-size: 10px; }
     .official-history > p { margin: 0; color: #8194aa; font-size: 7px; line-height: 1.55; }
+    .official-history > p button { display: block; margin-top: 6px; border: 0; padding: 0; background: transparent; color: #1769e0; font-size: 8px; font-weight: 850; text-align: left; }
     .official-pick { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.055); }
     .official-pick .daily-pick-head { color: #8ea3b8; }
     .official-pick .daily-pick-head b { padding: 4px 6px; border-radius: 6px; background: rgba(183,255,99,.12); color: #b7ff63; font-size: 7px; letter-spacing: .08em; }
@@ -924,8 +962,11 @@
     @media (max-width: 620px) {
       .topbar { background: rgba(255,255,255,.97); }
       .shell { width: 100%; max-width: 100%; padding-right: 12px; padding-left: 12px; overflow: clip; }
+      .dashboard-title-row { align-items: start; flex-direction: column; gap: 12px; }
+      .dashboard-title-row > div { min-width: 0; width: 100%; }
       .dashboard-title-row h1 { color: #252b37; }
-      .dashboard-status { gap: 6px; }
+      .dashboard-status { width: 100%; flex-wrap: wrap; gap: 6px; }
+      .status-pill { min-width: 0; max-width: 100%; }
       .dashboard-stat { min-width: 0; min-height: 220px; padding: 15px; border-radius: 22px; box-shadow: 0 14px 30px rgba(30,60,105,.13),inset 0 1px 0 rgba(255,255,255,.2); }
       .dashboard-stat::before { width: 180px; height: 180px; }
       .dashboard-stat::after { width: 120px; height: 120px; }
@@ -942,6 +983,8 @@
       .official-shortlist { padding: 16px; border-radius: 20px; }
       .official-shortlist .daily-head { align-items: start; }
       .official-shortlist .daily-head h2 { font-size: 19px; }
+      .official-date-nav { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .official-date-chip { min-width: 0; overflow: hidden; padding: 7px 5px; text-overflow: ellipsis; white-space: nowrap; }
       .official-history { grid-template-columns: 1fr; }
       .official-history-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
       .official-history > p { grid-column: auto; }
@@ -980,7 +1023,7 @@
         </div>
         <div class="dashboard-status"><span class="status-pill live"><i></i>Odds live</span><span class="status-pill verified" id="model-health">Rekencheck wordt uitgevoerd</span><span class="status-pill history">__HISTORY__</span></div>
       </div>
-      <section class="daily-shortlist official-shortlist" aria-labelledby="daily-title"><div class="daily-head"><div><span class="official-eyebrow">Officiële meetreeks · Bet365</span><h2 id="daily-title">Onze selecties</h2><p>Maximaal drie singles. Alleen een gevalideerd signaal met voldoende historie en conservatief positieve prijswaarde wordt toegelaten.</p></div><span id="daily-date"></span></div><div class="official-history" id="official-history"></div><div id="daily-picks"></div></section>
+      <section class="daily-shortlist official-shortlist" aria-labelledby="daily-title"><div class="daily-head"><div><span class="official-eyebrow">Officiële meetreeks · Bet365</span><h2 id="daily-title">Onze selecties</h2><p>Maximaal drie singles. Alleen een gevalideerd signaal met voldoende historie en conservatief positieve prijswaarde wordt toegelaten.</p></div><span id="daily-date"></span></div><div class="official-date-nav" id="official-date-nav" aria-label="Kies speeldag voor onze selecties"></div><div class="official-history" id="official-history"></div><div id="daily-picks"></div></section>
       <div class="explorer-heading"><div><span>Modelverkenner</span><h2>Alle kansen blijven beschikbaar</h2><p>Deze blokken en ranglijsten zijn analyse, geen automatisch betadvies.</p></div><b>Niet geforceerd</b></div>
       <div class="dashboard-stats" id="dashboard-stats"></div>
       <div class="dashboard-secondary">
@@ -1066,6 +1109,10 @@
     <div class="dialog-head"><div><small>Volledige wedstrijdanalyse</small><h2 id="match-dialog-title"></h2><p id="match-dialog-meta"></p></div><button class="dialog-close" id="close-match-dialog" type="button" aria-label="Sluiten">×</button></div>
     <div class="match-dialog-body" id="match-dialog-body"></div>
   </dialog>
+  <dialog class="archive-dialog" id="archive-dialog" aria-labelledby="archive-dialog-title">
+    <div class="dialog-head"><div><small id="archive-dialog-kicker">Resultatenarchief</small><h2 id="archive-dialog-title">Goed en fout</h2><p id="archive-dialog-meta"></p></div><button class="dialog-close" id="close-archive-dialog" type="button" aria-label="Sluiten">×</button></div>
+    <div class="archive-dialog-body" id="archive-dialog-body"></div>
+  </dialog>
   <dialog class="bet-dialog" id="bet-dialog" aria-labelledby="bet-dialog-title">
     <div class="bet-dialog-head"><div><h2 id="bet-dialog-title">Nieuwe bet</h2><p>Alle bedragen en quoteringen kun je later nog aanpassen.</p></div><button class="dialog-close" id="close-bet-dialog" type="button" aria-label="Sluiten">×</button></div>
     <form class="bet-dialog-body" id="bet-form">
@@ -1132,8 +1179,8 @@
     helpDialog.addEventListener("click",event=>{if(event.target===helpDialog)helpDialog.close();});
     if(DATA.length){renderSummary();renderFilters();renderAll();}else{document.querySelector(".workspace").innerHTML=`<div class="empty">Er zijn nog geen wedstrijden beschikbaar.</div>`;}
   </script>
-  <script src="aftrap-data.js?v=20260831-6"></script>
-  <script src="aftrap-app.js?v=20260831-6"></script>
+  <script src="aftrap-data.js?v=20260831-7"></script>
+  <script src="aftrap-app.js?v=20260831-7"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" integrity="sha384-yiVMs0R/Jyz7OhoXa/DsEMUSBLjEhr/QJta2ONO+zB6I8/GmNg/7AUFrZmAJV7KV" crossorigin="anonymous"></script>
   <script src="aftrap-account.js?v=20260830-1"></script>
 </body>
